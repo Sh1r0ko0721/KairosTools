@@ -8,7 +8,7 @@ param(
     [Parameter(Mandatory=$false)][string]$Notes = "Edit this description"
 )
 
-$ErrorActionPreference = "Stop"
+$ErrorActionPreference = "Continue"
 $tag = "v$Version"
 $repo = "Sh1r0ko0721/KairosTools"
 $amp = [char]38
@@ -40,14 +40,12 @@ Write-Host "      exe: $exeFull" -ForegroundColor Green
 
 # 2. commit + tag + push
 Write-Host "[2/3] Committing and pushing tag..." -ForegroundColor Yellow
-git add .
-git commit -m "release: $tag"
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "      (no changes to commit)" -ForegroundColor DarkGray
-}
-git push
-git tag $tag 2>$null
-git push origin $tag 2>$null
+git add . 2>&1 | Out-Null
+git commit -m "release: $tag" 2>&1 | Out-Null
+git push 2>&1 | Out-Null
+git tag $tag 2>&1 | Out-Null
+git push origin $tag 2>&1 | Out-Null
+Write-Host "      done" -ForegroundColor Green
 
 # 3. open release page
 Write-Host "[3/3] Opening GitHub release page..." -ForegroundColor Yellow

@@ -1,0 +1,30 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<OutputType>WinExe</OutputType>
+		<TargetFramework>net10.0-windows</TargetFramework>
+		<Nullable>enable</Nullable>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<UseWPF>true</UseWPF>
+
+		<ApplicationIcon>app.ico</ApplicationIcon>
+
+		<SelfContained>false</SelfContained>
+		<PublishSingleFile>true</PublishSingleFile>
+		<RuntimeIdentifier>win-x64</RuntimeIdentifier>
+		<SatelliteResourceLanguages>zh-Hans;en-US</SatelliteResourceLanguages>
+		<DebugType>none</DebugType>
+		<DebugSymbols>false</DebugSymbols>
+	</PropertyGroup>
+
+	<!-- ★ 把 ico 注册为 WPF 资源 -->
+	<ItemGroup>
+		<Resource Include="app.ico" />
+		<Resource Include="avatar.jpg" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="ModernWpfUI" Version="0.9.6" />
+	</ItemGroup>
+
+</Project>

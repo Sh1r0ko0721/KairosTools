@@ -7,9 +7,6 @@ namespace KairosTools
     {
         // ============ SysMain ============
 
-        /// <summary>
-        /// 判断 SysMain 是否处于“启用”状态。
-        /// </summary>
         public static bool IsSysMainEnabled()
         {
             string startType = RunPowerShell(
@@ -39,9 +36,6 @@ namespace KairosTools
 
         // ============ 内存压缩 ============
 
-        /// <summary>
-        /// 判断内存压缩是否启用。
-        /// </summary>
         public static bool IsMemoryCompressionEnabled()
         {
             string result = RunPowerShell(
@@ -59,6 +53,31 @@ namespace KairosTools
             RunPowerShell("Disable-MMAgent -MemoryCompression");
         }
 
+        // ============ HAGS（硬件加速GPU调度） ============
+
+        /// <summary>HwSchMode=2 表示启用，=1 表示禁用</summary>
+        public static bool IsHagsEnabled()
+        {
+            string result = RunPowerShell(
+                "(Get-ItemProperty -Path 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\GraphicsDrivers' " +
+                "-Name 'HwSchMode' -ErrorAction SilentlyContinue).HwSchMode");
+            return result?.Trim() == "2";
+        }
+
+        public static void EnableHags()
+        {
+            RunPowerShell(
+                "Set-ItemProperty -Path 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\GraphicsDrivers' " +
+                "-Name 'HwSchMode' -Value 2 -Type DWord");
+        }
+
+        public static void DisableHags()
+        {
+            RunPowerShell(
+                "Set-ItemProperty -Path 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\GraphicsDrivers' " +
+                "-Name 'HwSchMode' -Value 1 -Type DWord");
+        }
+
         // ============ 通用：调 powershell.exe 执行 ============
 
         private static string RunPowerShell(string command)
@@ -68,7 +87,8 @@ namespace KairosTools
                 var psi = new ProcessStartInfo
                 {
                     FileName = "powershell.exe",
-                    Arguments = "-NoProfile -NonInteractive -Command \"" + command.Replace("\"", "\\\"") + "\"",
+                    Arguments = "-NoProfile -NonInteractive -Command \"" +
+                                command.Replace("\"", "\\\"") + "\"",
                     UseShellExecute = false,
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
@@ -80,9 +100,7 @@ namespace KairosTools
                     string output = proc.StandardOutput.ReadToEnd();
                     proc.WaitForExit(10000);
 
-                    if (proc.ExitCode != 0)
-                        return null;
-
+                    if (proc.ExitCode != 0) return null;
                     return output.Trim();
                 }
             }

@@ -11,7 +11,13 @@ param(
 $ErrorActionPreference = "Continue"
 $tag = "v$Version"
 $repo = "Sh1r0ko0721/KairosTools"
-$amp = [char]38
+$token = $env:GITHUB_TOKEN   # 从环境变量读，避免硬编码到脚本
+
+if ([string]::IsNullOrWhiteSpace($token)) {
+    Write-Host "Please set GITHUB_TOKEN environment variable first" -ForegroundColor Red
+    Write-Host "  setx GITHUB_TOKEN ghp_xxxxxxxxxxxx" -ForegroundColor Yellow
+    exit 1
+}
 
 Write-Host ""
 Write-Host "================================" -ForegroundColor Cyan
@@ -20,7 +26,7 @@ Write-Host "================================" -ForegroundColor Cyan
 Write-Host ""
 
 # 1. build
-Write-Host "[1/3] Building..." -ForegroundColor Yellow
+Write-Host "[1/4] Building..." -ForegroundColor Yellow
 Push-Location KairosTools
 dotnet publish -c Release
 if ($LASTEXITCODE -ne 0) {
@@ -39,7 +45,7 @@ $exeFull = (Resolve-Path $exePath).Path
 Write-Host "      exe: $exeFull" -ForegroundColor Green
 
 # 2. commit + tag + push
-Write-Host "[2/3] Committing and pushing tag..." -ForegroundColor Yellow
+Write-Host "[2/4] Committing and pushing tag..." -ForegroundColor Yellow
 git add . 2>&1 | Out-Null
 git commit -m "release: $tag" 2>&1 | Out-Null
 git push 2>&1 | Out-Null
@@ -47,20 +53,56 @@ git tag $tag 2>&1 | Out-Null
 git push origin $tag 2>&1 | Out-Null
 Write-Host "      done" -ForegroundColor Green
 
-# 3. open release page
-Write-Host "[3/3] Opening GitHub release page..." -ForegroundColor Yellow
-$body = [uri]::EscapeDataString($Notes)
-$url = "https://github.com/${repo}/releases/new?tag=${tag}${amp}title=${tag}${amp}body=${body}"
-Start-Process $url
+# 3. create release via GitHub API
+Write-Host "[3/4] Creating release..." -ForegroundColor Yellow
+$headers = @{
+    "Authorization" = "token $token"
+    "Accept" = "application/vnd.github+json"
+    "User-Agent" = "KairosTools-Release-Script"
+}
+
+$releaseBody = @{
+    tag_name = $tag
+    name = $tag
+    body = $Notes
+    draft = $false
+    prerelease = $false
+} | ConvertTo-Json
+
+try {
+    $release = Invoke-RestMethod `
+        -Uri "https://api.github.com/repos/$repo/releases" `
+        -Method Post `
+        -Headers $headers `
+        -Body $releaseBody `
+        -ContentType "application/json"
+} catch {
+    Write-Host "Failed to create release: $_" -ForegroundColor Red
+    exit 1
+}
+
+Write-Host "      release created" -ForegroundColor Green
+
+# 4. upload exe asset
+Write-Host "[4/4] Uploading exe..." -ForegroundColor Yellow
+$uploadUrl = $release.upload_url -replace '\{.*\}', ''
+$uploadUrl = "$uploadUrl?name=KairosTools.exe"
+
+try {
+    Invoke-RestMethod `
+        -Uri $uploadUrl `
+        -Method Post `
+        -Headers $headers `
+        -InFile $exeFull `
+        -ContentType "application/octet-stream" | Out-Null
+} catch {
+    Write-Host "Failed to upload exe: $_" -ForegroundColor Red
+    exit 1
+}
 
 Write-Host ""
 Write-Host "================================" -ForegroundColor Green
 Write-Host "  Done!" -ForegroundColor Green
+Write-Host "  https://github.com/$repo/releases/tag/$tag" -ForegroundColor Cyan
 Write-Host "================================" -ForegroundColor Green
-Write-Host ""
-Write-Host "Now do these in browser:" -ForegroundColor Cyan
-Write-Host "  1. Edit the description" -ForegroundColor White
-Write-Host "  2. Drag this exe into the attachment box:" -ForegroundColor White
-Write-Host "     $exeFull" -ForegroundColor Yellow
-Write-Host "  3. Click Publish release" -ForegroundColor White
 Write-Host ""

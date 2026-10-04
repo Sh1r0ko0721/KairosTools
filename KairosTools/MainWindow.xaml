@@ -10,14 +10,14 @@
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
 
-        <Style x:Key="NavButtonStyle" TargetType="RadioButton">
+        <Style x:Key="NavButtonStyle" TargetType="ToggleButton">
             <Setter Property="Foreground" Value="#333333"/>
             <Setter Property="FontSize" Value="14"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
             <Setter Property="Template">
                 <Setter.Value>
-                    <ControlTemplate TargetType="RadioButton">
+                    <ControlTemplate TargetType="ToggleButton">
                         <Border x:Name="bd" Background="Transparent" CornerRadius="6" Height="40" Margin="8,2">
                             <Grid>
                                 <Grid.ColumnDefinitions>
@@ -30,14 +30,15 @@
                                            Text="{TemplateBinding Tag}" FontSize="16"
                                            Foreground="#0078D4"
                                            Margin="14,0,12,0" VerticalAlignment="Center"/>
-                                <ContentPresenter Grid.Column="2" VerticalAlignment="Center"/>
+                                <ContentPresenter Grid.Column="2" VerticalAlignment="Center"
+                                                  HorizontalAlignment="Left"/>
                             </Grid>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter TargetName="bd" Property="Background" Value="#F0F0F0"/>
                             </Trigger>
-                            <Trigger Property="IsChecked" Value="True">
+                            <Trigger Property="local:NavHighlight.Active" Value="True">
                                 <Setter TargetName="bd" Property="Background" Value="#C7DCF2"/>
                                 <Setter TargetName="indicator" Property="Background" Value="#004A8F"/>
                                 <Setter TargetName="icon" Property="Foreground" Value="#004A8F"/>
@@ -74,6 +75,9 @@
             </Setter>
         </Style>
 
+        <!-- ★ 开关：双 TextBlock + 双 Border + Opacity 动画 -->
+        <!-- ★ 开关：颜色由"是否符合推荐"决定（符合=蓝，不符=红），滑块位置由 IsChecked 决定 -->
+        <!-- ★ 开关：颜色由"是否符合推荐"决定（符合=蓝，不符=红），滑块位置由 IsChecked 决定，均带渐变动画 -->
         <Style x:Key="SwitchStyle" TargetType="ToggleButton">
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
@@ -81,27 +85,108 @@
                 <Setter.Value>
                     <ControlTemplate TargetType="ToggleButton">
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <TextBlock x:Name="statusText" Text="已禁用"
-                                       FontSize="12" Foreground="#888888"
-                                       VerticalAlignment="Center" Margin="0,0,10,0"/>
-                            <Border x:Name="track" Width="40" Height="20" CornerRadius="10" Background="#CCCCCC">
+                            <!-- 状态文字：双层 TextBlock，红层在下，蓝层在上，靠 Opacity 切换 -->
+                            <Grid Margin="0,0,10,0" VerticalAlignment="Center">
+                                <TextBlock x:Name="textRed" Text="已禁用" FontSize="12"
+                                   Foreground="#E74C3C" VerticalAlignment="Center"/>
+                                <TextBlock x:Name="textBlue" Text="已禁用" FontSize="12"
+                                   Foreground="#0078D4" VerticalAlignment="Center" Opacity="0"/>
+                            </Grid>
+
+                            <!-- 轨道：双层 Border，红底 + 蓝层（透明度控制） -->
+                            <Grid Width="40" Height="20">
+                                <Border CornerRadius="10" Background="#E74C3C"/>
+                                <Border x:Name="trackBlue" CornerRadius="10"
+                                Background="#0078D4" Opacity="0"/>
                                 <Border x:Name="thumb" Width="16" Height="16" CornerRadius="8"
-                                        Background="White" HorizontalAlignment="Left" Margin="2,0,0,0"/>
-                            </Border>
+                                Background="White" HorizontalAlignment="Left"
+                                VerticalAlignment="Center" Margin="2,0,0,0"/>
+                            </Grid>
                         </StackPanel>
+
                         <ControlTemplate.Triggers>
+                            <!-- 开关状态：滑块位置 + 文字内容 -->
                             <Trigger Property="IsChecked" Value="True">
-                                <Setter TargetName="thumb" Property="HorizontalAlignment" Value="Right"/>
-                                <Setter TargetName="thumb" Property="Margin" Value="0,0,2,0"/>
-                                <Setter TargetName="statusText" Property="Text" Value="已启用"/>
+                                <Setter TargetName="textRed" Property="Text" Value="已启用"/>
+                                <Setter TargetName="textBlue" Property="Text" Value="已启用"/>
+                                <Setter TargetName="thumb" Property="Margin" Value="22,0,0,0"/>
+                                <Trigger.EnterActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <ThicknessAnimation Storyboard.TargetName="thumb"
+                                                        Storyboard.TargetProperty="Margin"
+                                                        From="2,0,0,0" To="22,0,0,0"
+                                                        Duration="0:0:0.24">
+                                                <ThicknessAnimation.EasingFunction>
+                                                    <CubicEase EasingMode="EaseOut"/>
+                                                </ThicknessAnimation.EasingFunction>
+                                            </ThicknessAnimation>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.EnterActions>
+                                <Trigger.ExitActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <ThicknessAnimation Storyboard.TargetName="thumb"
+                                                        Storyboard.TargetProperty="Margin"
+                                                        From="22,0,0,0" To="2,0,0,0"
+                                                        Duration="0:0:0.24">
+                                                <ThicknessAnimation.EasingFunction>
+                                                    <CubicEase EasingMode="EaseOut"/>
+                                                </ThicknessAnimation.EasingFunction>
+                                            </ThicknessAnimation>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.ExitActions>
                             </Trigger>
+                            <Trigger Property="IsChecked" Value="False">
+                                <Setter TargetName="textRed" Property="Text" Value="已禁用"/>
+                                <Setter TargetName="textBlue" Property="Text" Value="已禁用"/>
+                                <Setter TargetName="thumb" Property="Margin" Value="2,0,0,0"/>
+                            </Trigger>
+
+                            <!-- ★ 符合推荐：蓝层淡入（带渐变） -->
                             <DataTrigger Binding="{Binding IsOnRecommended}" Value="True">
-                                <Setter TargetName="track" Property="Background" Value="#0078D4"/>
-                                <Setter TargetName="statusText" Property="Foreground" Value="#0078D4"/>
-                            </DataTrigger>
-                            <DataTrigger Binding="{Binding IsOnRecommended}" Value="False">
-                                <Setter TargetName="track" Property="Background" Value="#E74C3C"/>
-                                <Setter TargetName="statusText" Property="Foreground" Value="#E74C3C"/>
+                                <DataTrigger.EnterActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetName="trackBlue"
+                                                     Storyboard.TargetProperty="Opacity"
+                                                     To="1" Duration="0:0:0.28">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <CubicEase EasingMode="EaseOut"/>
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                            <DoubleAnimation Storyboard.TargetName="textBlue"
+                                                     Storyboard.TargetProperty="Opacity"
+                                                     To="1" Duration="0:0:0.28">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <CubicEase EasingMode="EaseOut"/>
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </DataTrigger.EnterActions>
+                                <DataTrigger.ExitActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetName="trackBlue"
+                                                     Storyboard.TargetProperty="Opacity"
+                                                     To="0" Duration="0:0:0.28">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <CubicEase EasingMode="EaseOut"/>
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                            <DoubleAnimation Storyboard.TargetName="textBlue"
+                                                     Storyboard.TargetProperty="Opacity"
+                                                     To="0" Duration="0:0:0.28">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <CubicEase EasingMode="EaseOut"/>
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </DataTrigger.ExitActions>
                             </DataTrigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -221,24 +306,41 @@
                                  Content="主页" Style="{StaticResource NavButtonStyle}"
                                  IsChecked="True" Checked="Nav_Checked"/>
 
-                    <RadioButton x:Name="NavOptimize" GroupName="Nav" Tag="&#xE945;"
-                                 Content="优化" Style="{StaticResource NavButtonStyle}"
-                                 Checked="Nav_Checked"/>
+                    <ToggleButton x:Name="NavOptimize" Tag="&#xE945;"
+                                  Style="{StaticResource NavButtonStyle}"
+                                  Checked="NavOptimize_Checked"
+                                  Unchecked="NavOptimize_Unchecked">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <TextBlock Text="优化" VerticalAlignment="Center"/>
+                            <TextBlock x:Name="OptimizeArrow" FontFamily="Segoe MDL2 Assets"
+                                       Text="&#xE76C;" FontSize="8" Foreground="#888888"
+                                       Margin="6,1,0,0" VerticalAlignment="Center"
+                                       RenderTransformOrigin="0.5,0.5">
+                                <TextBlock.RenderTransform>
+                                    <RotateTransform Angle="0"/>
+                                </TextBlock.RenderTransform>
+                            </TextBlock>
+                        </StackPanel>
+                    </ToggleButton>
 
-                    <StackPanel x:Name="OptimizeSubMenu" Visibility="Collapsed">
-                        <RadioButton x:Name="SubOptimizePlan" GroupName="SubNav" Content="调整方案"
-                                     Style="{StaticResource SubNavButtonStyle}" Checked="SubNav_Checked"/>
-                        <RadioButton x:Name="SubOptimizeBasic" GroupName="SubNav" Content="基础"
-                                     Style="{StaticResource SubNavButtonStyle}" Checked="SubNav_Checked"/>
-                        <RadioButton x:Name="SubOptimizeSecurity" GroupName="SubNav" Content="安全"
-                                     Style="{StaticResource SubNavButtonStyle}" Checked="SubNav_Checked"/>
-                        <RadioButton x:Name="SubOptimizePower" GroupName="SubNav" Content="电源管理"
-                                     Style="{StaticResource SubNavButtonStyle}" Checked="SubNav_Checked"/>
-                        <RadioButton x:Name="SubOptimizePrivacy" GroupName="SubNav" Content="隐私"
-                                     Style="{StaticResource SubNavButtonStyle}" Checked="SubNav_Checked"/>
-                        <RadioButton x:Name="SubOptimizeTask" GroupName="SubNav" Content="任务"
-                                     Style="{StaticResource SubNavButtonStyle}" Checked="SubNav_Checked"/>
-                    </StackPanel>
+                    <Border x:Name="OptimizeSubMenuBorder"
+                            Height="0" Visibility="Collapsed"
+                            ClipToBounds="True">
+                        <StackPanel>
+                            <RadioButton x:Name="SubOptimizePlan" GroupName="SubNav" Content="调整方案"
+                                         Style="{StaticResource SubNavButtonStyle}" Checked="SubNav_Checked"/>
+                            <RadioButton x:Name="SubOptimizeBasic" GroupName="SubNav" Content="基础"
+                                         Style="{StaticResource SubNavButtonStyle}" Checked="SubNav_Checked"/>
+                            <RadioButton x:Name="SubOptimizeSecurity" GroupName="SubNav" Content="安全"
+                                         Style="{StaticResource SubNavButtonStyle}" Checked="SubNav_Checked"/>
+                            <RadioButton x:Name="SubOptimizePower" GroupName="SubNav" Content="电源管理"
+                                         Style="{StaticResource SubNavButtonStyle}" Checked="SubNav_Checked"/>
+                            <RadioButton x:Name="SubOptimizePrivacy" GroupName="SubNav" Content="隐私"
+                                         Style="{StaticResource SubNavButtonStyle}" Checked="SubNav_Checked"/>
+                            <RadioButton x:Name="SubOptimizeTask" GroupName="SubNav" Content="任务"
+                                         Style="{StaticResource SubNavButtonStyle}" Checked="SubNav_Checked"/>
+                        </StackPanel>
+                    </Border>
 
                     <RadioButton x:Name="NavSettings" GroupName="Nav" Tag="&#xE713;"
                                  Content="设置" Style="{StaticResource NavButtonStyle}"
@@ -251,7 +353,6 @@
             </ScrollViewer>
         </Border>
 
-        <!-- ★ 右侧内容区：加 ClipToBounds 防止滑入图层溢出到侧栏 -->
         <Grid Grid.Column="1" Background="White" ClipToBounds="True">
             <Grid x:Name="PageHome">
                 <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
@@ -301,10 +402,9 @@
                                                     <TextBlock Text="{Binding Name}"
                                                                FontSize="14" FontWeight="SemiBold"
                                                                VerticalAlignment="Center"/>
-                                                    <!-- ★ 箭头：向右的箭头，展开时顺时针旋转 90° 变成向下 -->
                                                     <TextBlock x:Name="arrow" FontFamily="Segoe MDL2 Assets"
-                                                               Text="&#xE76C;" FontSize="10" Foreground="#888888"
-                                                               Margin="8,1,0,0" VerticalAlignment="Center"
+                                                               Text="&#xE76C;" FontSize="8" Foreground="#888888"
+                                                               Margin="6,1,0,0" VerticalAlignment="Center"
                                                                RenderTransformOrigin="0.5,0.5">
                                                         <TextBlock.RenderTransform>
                                                             <RotateTransform Angle="0"/>
@@ -319,7 +419,6 @@
                                                           VerticalAlignment="Center"/>
                                         </Grid>
 
-                                        <!-- ★ 展开区域：用 AnimatedExpander 附加属性做高度动画 -->
                                         <Border local:AnimatedExpander.IsExpanded="{Binding IsExpanded}"
                                                 ClipToBounds="True"
                                                 Opacity="0"
@@ -339,7 +438,6 @@
                                 </Border>
 
                                 <DataTemplate.Triggers>
-                                    <!-- ★ 箭头旋转动画（可中途打断） -->
                                     <DataTrigger Binding="{Binding IsExpanded}" Value="True">
                                         <DataTrigger.EnterActions>
                                             <BeginStoryboard>

@@ -14,14 +14,6 @@ namespace KairosTools
                 typeof(AnimatedExpander),
                 new PropertyMetadata(false, OnIsExpandedChanged));
 
-        // 内部用：记录当前目标状态，防止被打断的动画执行清理
-        private static readonly DependencyProperty TargetStateProperty =
-            DependencyProperty.RegisterAttached(
-                "TargetState",
-                typeof(bool),
-                typeof(AnimatedExpander),
-                new PropertyMetadata(false));
-
         public static bool GetIsExpanded(DependencyObject obj)
             => (bool)obj.GetValue(IsExpandedProperty);
 
@@ -33,109 +25,86 @@ namespace KairosTools
             if (!(d is Border border)) return;
             bool expand = (bool)e.NewValue;
 
-            // ★ 关键：在清除动画前读当前高度（Height 会返回动画插值）
-            double currentHeight = GetCurrentHeight(border);
+            // ★ 关键：先读当前高度（动画进行中 Height 返回插值）
+            double currentHeight = border.Height;
+            if (double.IsNaN(currentHeight) || currentHeight < 0)
+                currentHeight = border.ActualHeight;
+            if (currentHeight < 0) currentHeight = 0;
+
             double currentOpacity = border.Opacity;
 
-            // 记录新的目标状态
-            border.SetValue(TargetStateProperty, expand);
-
-            // 打断旧动画
+            // 再打断旧动画
             border.BeginAnimation(FrameworkElement.HeightProperty, null);
             border.BeginAnimation(UIElement.OpacityProperty, null);
 
-            // 恢复到当前状态，避免闪一下
+            // 恢复本地值等于当前状态，避免闪
             border.Height = currentHeight;
             border.Opacity = currentOpacity;
 
             if (expand)
             {
                 border.Visibility = Visibility.Visible;
-
-                double targetHeight = MeasureTargetHeight(border);
-                if (targetHeight <= 0) targetHeight = 100;
+                double targetHeight = MeasureTargetHeight(border, currentHeight);
                 if (currentHeight >= targetHeight) currentHeight = targetHeight;
 
-                // 高度动画
                 var heightAnim = new DoubleAnimation(currentHeight, targetHeight,
                     TimeSpan.FromMilliseconds(320))
                 {
-                    EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
-                };
-                heightAnim.Completed += (s, ev) =>
-                {
-                    // 只有当前目标状态还是"展开"时才清理
-                    if ((bool)border.GetValue(TargetStateProperty) != true) return;
-                    border.BeginAnimation(FrameworkElement.HeightProperty, null);
-                    border.Height = double.NaN;
+                    EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut },
+                    FillBehavior = FillBehavior.HoldEnd
                 };
                 border.BeginAnimation(FrameworkElement.HeightProperty, heightAnim);
 
-                // 透明度动画
                 var opAnim = new DoubleAnimation(currentOpacity, 1,
                     TimeSpan.FromMilliseconds(240))
                 {
-                    EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+                    EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut },
+                    FillBehavior = FillBehavior.HoldEnd
                 };
                 border.BeginAnimation(UIElement.OpacityProperty, opAnim);
             }
             else
             {
-                if (currentHeight <= 0) currentHeight = 0;
-
-                // ★ 收回也用 EaseOut，先快后慢
                 var heightAnim = new DoubleAnimation(currentHeight, 0,
                     TimeSpan.FromMilliseconds(280))
                 {
-                    EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
-                };
-                heightAnim.Completed += (s, ev) =>
-                {
-                    // 只有当前目标状态还是"收起"时才清理
-                    if ((bool)border.GetValue(TargetStateProperty) != false) return;
-                    border.BeginAnimation(FrameworkElement.HeightProperty, null);
-                    border.Height = 0;
-                    border.Visibility = Visibility.Collapsed;
+                    EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut },
+                    FillBehavior = FillBehavior.HoldEnd
                 };
                 border.BeginAnimation(FrameworkElement.HeightProperty, heightAnim);
 
                 var opAnim = new DoubleAnimation(currentOpacity, 0,
                     TimeSpan.FromMilliseconds(220))
                 {
-                    EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+                    EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut },
+                    FillBehavior = FillBehavior.HoldEnd
                 };
                 border.BeginAnimation(UIElement.OpacityProperty, opAnim);
             }
         }
 
-        /// <summary>
-        /// 读取当前高度。
-        /// Height 被动画控制时返回动画插值；否则返回布局高度。
-        /// </summary>
-        private static double GetCurrentHeight(Border border)
+        private static double MeasureTargetHeight(Border border, double currentHeight)
         {
-            double h = border.Height;
-            if (!double.IsNaN(h) && h >= 0)
-                return h;
+            // ★ 临时让高度自适应，准确测量目标高度
+            border.Height = double.NaN;
 
-            double actual = border.ActualHeight;
-            if (actual > 0)
-                return actual;
-
-            return 0;
-        }
-
-        /// <summary>测量展开后的目标高度</summary>
-        private static double MeasureTargetHeight(Border border)
-        {
-            if (border.Child is FrameworkElement child)
+            double width = border.ActualWidth;
+            if (width <= 0)
             {
-                double measureWidth = border.ActualWidth;
-                if (measureWidth <= 0) measureWidth = 560;
-                child.Measure(new Size(measureWidth, double.PositiveInfinity));
-                return child.DesiredSize.Height;
+                var parent = border.Parent as FrameworkElement;
+                if (parent != null && parent.ActualWidth > 0)
+                    width = parent.ActualWidth;
+                else
+                    width = 560;
             }
-            return 100;
+
+            border.Measure(new Size(width, double.PositiveInfinity));
+            double h = border.DesiredSize.Height;
+            if (h <= 0) h = 100;
+
+            // 恢复
+            border.Height = currentHeight;
+            return h;
         }
     }
 }

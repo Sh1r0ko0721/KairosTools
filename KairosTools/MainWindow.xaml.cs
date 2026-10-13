@@ -1,10 +1,13 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
+using System.Windows.Media.Effects;
 using System.Windows.Threading;
 
 namespace KairosTools
@@ -12,15 +15,66 @@ namespace KairosTools
     public partial class MainWindow : Window
     {
         public ObservableCollection<BasicItem> BasicItems { get; set; }
+        public AppSettings Settings => AppSettings.Instance;
+
+        public static readonly DependencyProperty IsWeakPcModeProperty =
+            DependencyProperty.Register(
+                nameof(IsWeakPcMode),
+                typeof(bool),
+                typeof(MainWindow),
+                new PropertyMetadata(false, OnIsWeakPcModeChanged));
+
+        public bool IsWeakPcMode
+        {
+            get => (bool)GetValue(IsWeakPcModeProperty);
+            set => SetValue(IsWeakPcModeProperty, value);
+        }
+
+        private static void OnIsWeakPcModeChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+        {
+            if (!(d is MainWindow mw)) return;
+            bool newValue = (bool)e.NewValue;
+            AppSettings.Instance.IsWeakPcMode = newValue;
+            AppSettings.Instance.Save();
+
+            // ★ 同步到每个 BasicItem，XAML 里直接绑
+            if (mw.BasicItems != null)
+            {
+                foreach (var item in mw.BasicItems)
+                    item.IsWeakPcMode = newValue;
+            }
+
+            if (newValue)
+            {
+                mw.Dispatcher.BeginInvoke(new Action(() => mw.ClearAllButtonEffects()),
+                    DispatcherPriority.Background);
+            }
+        }
 
         public MainWindow()
         {
+            AppSettings.Instance.Load();
             InitializeComponent();
+            IsWeakPcMode = AppSettings.Instance.IsWeakPcMode;
+
+            StateChanged += (s, e) =>
+            {
+                if (MaxBtn != null)
+                    MaxBtn.Content = WindowState == WindowState.Maximized ? "\uE923" : "\uE922";
+
+                if (RootGrid != null)
+                {
+                    RootGrid.Margin = WindowState == WindowState.Maximized
+                        ? new Thickness(7)
+                        : new Thickness(0);
+                }
+            };
 
             bool mouseAccelOn = MouseHelper.IsMouseAccelerationEnabled();
             bool sysMainOn = SystemHelper.IsSysMainEnabled();
             bool memCompOn = SystemHelper.IsMemoryCompressionEnabled();
             bool hagsOn = SystemHelper.IsHagsEnabled();
+            bool deliveryOn = SystemHelper.IsDeliveryOptimizationEnabled();
 
             BasicItems = new ObservableCollection<BasicItem>
             {
@@ -36,7 +90,8 @@ namespace KairosTools
                     RecommendText = "个人建议在任何竞技游戏中禁用；如果主要使用触控板，则保持默认。",
                     Recommended = false,
                     NeedRestart = false,
-                    IsOn = mouseAccelOn
+                    IsOn = mouseAccelOn,
+                    IsWeakPcMode = AppSettings.Instance.IsWeakPcMode
                 },
                 new BasicItem
                 {
@@ -51,7 +106,8 @@ namespace KairosTools
                         "禁用减少写入操作次数，延长固态硬盘寿命并降低CPU使用率。",
                     Recommended = false,
                     NeedRestart = false,
-                    IsOn = sysMainOn
+                    IsOn = sysMainOn,
+                    IsWeakPcMode = AppSettings.Instance.IsWeakPcMode
                 },
                 new BasicItem
                 {
@@ -64,7 +120,8 @@ namespace KairosTools
                     RecommendText = "在24GB及以上的设备中，建议禁用；如果内存紧张，则保持默认。",
                     Recommended = false,
                     NeedRestart = true,
-                    IsOn = memCompOn
+                    IsOn = memCompOn,
+                    IsWeakPcMode = AppSettings.Instance.IsWeakPcMode
                 },
                 new BasicItem
                 {
@@ -80,7 +137,24 @@ namespace KairosTools
                         "如果需要开启DLSS帧生成和FSR3帧生成，那么此项目必须启用。",
                     Recommended = true,
                     NeedRestart = true,
-                    IsOn = hagsOn
+                    IsOn = hagsOn,
+                    IsWeakPcMode = AppSettings.Instance.IsWeakPcMode
+                },
+                new BasicItem
+                {
+                    Name = "交付优化",
+                    Description =
+                        "禁用P2P更新分发给其他PC。\n\n" +
+                        "Delivery Optimization 可以通过本地网络和互联网共享下载的补丁，创建额外的出站流。" +
+                        "设置 DODownloadMode=0 禁用此共享，仅保留从微软服务器的直接下载。" +
+                        "设置不影响更新过程本身，并排除了强制绕过时出现的 0x80d03002 错误。" +
+                        "在早期的 Windows 10 中，启用此功能会导致严重的性能问题。",
+                    RecommendText =
+                        "建议在家中只有1台PC时始终禁用。在使用早期 Windows 10 的PC上始终禁用。",
+                    Recommended = false,
+                    NeedRestart = false,
+                    IsOn = deliveryOn,
+                    IsWeakPcMode = AppSettings.Instance.IsWeakPcMode
                 },
             };
 
@@ -112,6 +186,10 @@ namespace KairosTools
                                 if (isOn) SystemHelper.EnableHags();
                                 else SystemHelper.DisableHags();
                                 break;
+                            case "交付优化":
+                                if (isOn) SystemHelper.EnableDeliveryOptimization();
+                                else SystemHelper.DisableDeliveryOptimization();
+                                break;
                         }
                     });
 
@@ -125,13 +203,177 @@ namespace KairosTools
             Loaded += (s, e) =>
             {
                 NavHighlight.SetActive(NavHome, true);
+                RegisterAllLinkButtons();
             };
         }
+
+        // ==================== 链接按钮 hover 效果 ====================
+
+        private void RegisterAllLinkButtons()
+        {
+            foreach (var btn in FindVisualChildren<Button>(this))
+            {
+                if (btn.Style == null) continue;
+                if (!ReferenceEquals(btn.Style, FindResource("LinkButtonStyle"))) continue;
+
+                btn.MouseEnter -= LinkBtn_MouseEnter;
+                btn.MouseLeave -= LinkBtn_MouseLeave;
+                btn.MouseEnter += LinkBtn_MouseEnter;
+                btn.MouseLeave += LinkBtn_MouseLeave;
+            }
+        }
+
+        private void LinkBtn_MouseEnter(object sender, MouseEventArgs e)
+        {
+            if (!(sender is Button btn)) return;
+            var bd = btn.Template.FindName("bd", btn) as Border;
+            if (bd == null) return;
+
+            var st = GetOrCreateTransform(bd);
+
+            // 弱PC模式：瞬时设值，无动画
+            if (IsWeakPcMode)
+            {
+                st.ScaleX = 1.05;
+                st.ScaleY = 1.05;
+                return;
+            }
+
+            // ★ 阴影和缩放统一 220ms CubicEase 缓动
+            var duration = TimeSpan.FromMilliseconds(220);
+            var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
+
+            var shadow = new DropShadowEffect
+            {
+                Color = Colors.Black,
+                ShadowDepth = 6,
+                BlurRadius = 0,
+                Opacity = 0,
+                Direction = 270
+            };
+            bd.Effect = shadow;
+            shadow.BeginAnimation(DropShadowEffect.BlurRadiusProperty,
+                new DoubleAnimation(0, 28, duration) { EasingFunction = ease });
+            shadow.BeginAnimation(DropShadowEffect.OpacityProperty,
+                new DoubleAnimation(0, 0.22, duration) { EasingFunction = ease });
+
+            double cur = st.ScaleX;
+            st.BeginAnimation(ScaleTransform.ScaleXProperty,
+                new DoubleAnimation(cur, 1.05, duration) { EasingFunction = ease });
+            st.BeginAnimation(ScaleTransform.ScaleYProperty,
+                new DoubleAnimation(cur, 1.05, duration) { EasingFunction = ease });
+        }
+
+        private void LinkBtn_MouseLeave(object sender, MouseEventArgs e)
+        {
+            if (!(sender is Button btn)) return;
+            var bd = btn.Template.FindName("bd", btn) as Border;
+            if (bd == null) return;
+
+            var st = GetOrCreateTransform(bd);
+
+            if (IsWeakPcMode)
+            {
+                bd.Effect = null;
+                st.ScaleX = 1;
+                st.ScaleY = 1;
+                return;
+            }
+
+            // ★ 与 MouseEnter 完全一致：220ms CubicEase EaseOut
+            var duration = TimeSpan.FromMilliseconds(220);
+            var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
+
+            if (bd.Effect is DropShadowEffect shadow)
+            {
+                var blurAnim = new DoubleAnimation(shadow.BlurRadius, 0, duration) { EasingFunction = ease };
+                var opAnim = new DoubleAnimation(shadow.Opacity, 0, duration) { EasingFunction = ease };
+                opAnim.Completed += (s, ev) => { bd.Effect = null; };
+                shadow.BeginAnimation(DropShadowEffect.BlurRadiusProperty, blurAnim);
+                shadow.BeginAnimation(DropShadowEffect.OpacityProperty, opAnim);
+            }
+
+            double cur = st.ScaleX;
+            st.BeginAnimation(ScaleTransform.ScaleXProperty,
+                new DoubleAnimation(cur, 1, duration) { EasingFunction = ease });
+            st.BeginAnimation(ScaleTransform.ScaleYProperty,
+                new DoubleAnimation(cur, 1, duration) { EasingFunction = ease });
+        }
+
+        /// <summary>获取或创建 Border 上独立的、未冻结的 ScaleTransform</summary>
+        private ScaleTransform GetOrCreateTransform(Border bd)
+        {
+            if (bd.RenderTransform is ScaleTransform st && !st.IsFrozen)
+                return st;
+
+            st = new ScaleTransform(1, 1);
+            bd.RenderTransformOrigin = new Point(0.5, 0.5);
+            bd.RenderTransform = st;
+            return st;
+        }
+
+        private void ClearAllButtonEffects()
+        {
+            foreach (var btn in FindVisualChildren<Button>(this))
+            {
+                if (btn.Template == null) continue;
+                var bd = btn.Template.FindName("bd", btn) as Border;
+                if (bd == null) continue;
+
+                bd.Effect = null;
+
+                if (bd.RenderTransform is ScaleTransform st && !st.IsFrozen)
+                {
+                    st.BeginAnimation(ScaleTransform.ScaleXProperty, null);
+                    st.BeginAnimation(ScaleTransform.ScaleYProperty, null);
+                    st.ScaleX = 1;
+                    st.ScaleY = 1;
+                }
+            }
+        }
+
+        private static IEnumerable<T> FindVisualChildren<T>(DependencyObject parent)
+            where T : DependencyObject
+        {
+            if (parent == null) yield break;
+            int count = VisualTreeHelper.GetChildrenCount(parent);
+            for (int i = 0; i < count; i++)
+            {
+                var child = VisualTreeHelper.GetChild(parent, i);
+                if (child is T t) yield return t;
+                foreach (var sub in FindVisualChildren<T>(child))
+                    yield return sub;
+            }
+        }
+
+        // ==================== 标题栏按钮 ====================
+
+        private void MinBtn_Click(object sender, RoutedEventArgs e)
+            => WindowState = WindowState.Minimized;
+
+        private void MaxBtn_Click(object sender, RoutedEventArgs e)
+            => WindowState = WindowState == WindowState.Maximized
+                ? WindowState.Normal
+                : WindowState.Maximized;
+
+        private void CloseBtn_Click(object sender, RoutedEventArgs e)
+            => Close();
+
+        // ==================== Toast ====================
 
         private async void ShowToast(string message)
         {
             ToastText.Text = message;
             Toast.Visibility = Visibility.Visible;
+
+            if (IsWeakPcMode)
+            {
+                Toast.Opacity = 1;
+                await Task.Delay(2400);
+                Toast.Visibility = Visibility.Collapsed;
+                Toast.Opacity = 0;
+                return;
+            }
 
             Toast.BeginAnimation(UIElement.OpacityProperty,
                 new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(200)));
@@ -148,6 +390,20 @@ namespace KairosTools
         private void PlaySlideInAnimation()
         {
             if (BasicItemsControl == null) return;
+
+            if (IsWeakPcMode)
+            {
+                BasicHeader.Opacity = 1;
+                for (int i = 0; i < BasicItemsControl.Items.Count; i++)
+                {
+                    var c = BasicItemsControl.ItemContainerGenerator
+                        .ContainerFromIndex(i) as ContentPresenter;
+                    if (c == null) continue;
+                    var root = VisualTreeHelper.GetChild(c, 0) as FrameworkElement;
+                    if (root != null) root.Opacity = 1;
+                }
+                return;
+            }
 
             AnimateSlideIn(BasicHeader, 0);
 
@@ -192,6 +448,7 @@ namespace KairosTools
         private void PlayFadeIn(FrameworkElement el)
         {
             if (el == null) return;
+            if (IsWeakPcMode) { el.Opacity = 1; return; }
 
             el.BeginAnimation(UIElement.OpacityProperty, null);
             el.Opacity = 0;
@@ -220,12 +477,25 @@ namespace KairosTools
         private void AnimateArrow(TextBlock arrow, double toAngle)
         {
             if (arrow == null) return;
+
             if (!(arrow.RenderTransform is RotateTransform rot))
             {
                 rot = new RotateTransform(0);
                 arrow.RenderTransform = rot;
             }
-            var anim = new DoubleAnimation(rot.Angle, toAngle, TimeSpan.FromMilliseconds(250))
+
+            if (IsWeakPcMode)
+            {
+                rot.BeginAnimation(RotateTransform.AngleProperty, null);
+                rot.Angle = toAngle;
+                return;
+            }
+
+            double currentAngle = rot.Angle;
+            rot.BeginAnimation(RotateTransform.AngleProperty, null);
+            rot.Angle = currentAngle;
+
+            var anim = new DoubleAnimation(currentAngle, toAngle, TimeSpan.FromMilliseconds(250))
             {
                 EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut },
                 FillBehavior = FillBehavior.HoldEnd
@@ -236,6 +506,21 @@ namespace KairosTools
         private void PlaySubMenuAnimation(bool expand)
         {
             if (OptimizeSubMenuBorder == null) return;
+
+            if (IsWeakPcMode)
+            {
+                if (expand)
+                {
+                    OptimizeSubMenuBorder.Visibility = Visibility.Visible;
+                    OptimizeSubMenuBorder.Height = double.NaN;
+                }
+                else
+                {
+                    OptimizeSubMenuBorder.Height = 0;
+                    OptimizeSubMenuBorder.Visibility = Visibility.Collapsed;
+                }
+                return;
+            }
 
             double currentHeight = OptimizeSubMenuBorder.Height;
             if (double.IsNaN(currentHeight) || currentHeight < 0)
@@ -296,13 +581,18 @@ namespace KairosTools
                 var el = subItems[i];
                 if (el == null) continue;
 
+                if (IsWeakPcMode)
+                {
+                    el.Opacity = 1;
+                    el.RenderTransform = new TranslateTransform(0, 0);
+                    continue;
+                }
+
                 el.BeginAnimation(UIElement.OpacityProperty, null);
                 el.Opacity = 0;
 
                 if (!(el.RenderTransform is TranslateTransform))
-                {
                     el.RenderTransform = new TranslateTransform(0, -8);
-                }
                 var tt = el.RenderTransform as TranslateTransform;
                 tt.X = 0;
                 tt.Y = -8;
@@ -347,7 +637,18 @@ namespace KairosTools
 
         private void OpenGithub(object sender, RoutedEventArgs e)
         {
-            ShowToast("GitHub 主页暂未开放");
+            try
+            {
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = "https://github.com/Sh1r0ko0721",
+                    UseShellExecute = true
+                });
+            }
+            catch (Exception ex)
+            {
+                ShowToast("打开链接失败：" + ex.Message);
+            }
         }
 
         // ==================== 页面切换 ====================
@@ -380,11 +681,9 @@ namespace KairosTools
             if (PageHome == null) return;
             var radio = (RadioButton)sender;
 
-            // 清除子菜单选中 + 优化高亮
             ClearSubMenuSelection();
             NavHighlight.SetActive(NavOptimize, false);
 
-            // 主菜单高亮只保留当前
             NavHighlight.SetActive(NavHome, false);
             NavHighlight.SetActive(NavSettings, false);
             NavHighlight.SetActive(NavAbout, false);
@@ -405,6 +704,7 @@ namespace KairosTools
                 case "NavAbout":
                     PageAbout.Visibility = Visibility.Visible;
                     PlayFadeIn(PageAbout);
+                    RegisterAllLinkButtons();
                     break;
             }
         }
@@ -413,12 +713,10 @@ namespace KairosTools
         {
             if (PageHome == null) return;
 
-            // ★ 关键：清除所有主菜单的 IsChecked，确保下次点它们能触发 Checked 事件
             if (NavHome != null) NavHome.IsChecked = false;
             if (NavSettings != null) NavSettings.IsChecked = false;
             if (NavAbout != null) NavAbout.IsChecked = false;
 
-            // 高亮切换到"优化"
             NavHighlight.SetActive(NavHome, false);
             NavHighlight.SetActive(NavSettings, false);
             NavHighlight.SetActive(NavAbout, false);

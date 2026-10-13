@@ -9,8 +9,6 @@ namespace KairosTools
         public string Description { get; set; }
         public string RecommendText { get; set; }
         public bool Recommended { get; set; }
-
-        // ★ 是否需要重启才能生效
         public bool NeedRestart { get; set; } = false;
 
         private bool _isOn;
@@ -19,6 +17,7 @@ namespace KairosTools
             get => _isOn;
             set
             {
+                if (_isOn == value) return;
                 _isOn = value;
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(IsOnRecommended));
@@ -32,6 +31,14 @@ namespace KairosTools
         {
             get => _isExpanded;
             set { _isExpanded = value; OnPropertyChanged(); }
+        }
+
+        // ★ 弱PC模式：每个 item 单独一份，用于 XAML 里直接绑定
+        private bool _isWeakPcMode;
+        public bool IsWeakPcMode
+        {
+            get => _isWeakPcMode;
+            set { _isWeakPcMode = value; OnPropertyChanged(); }
         }
 
         public event PropertyChangedEventHandler PropertyChanged;

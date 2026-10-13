@@ -15,6 +15,8 @@
 		<SatelliteResourceLanguages>zh-Hans;en-US</SatelliteResourceLanguages>
 		<DebugType>none</DebugType>
 		<DebugSymbols>false</DebugSymbols>
+		<RunAnalyzersDuringBuild>False</RunAnalyzersDuringBuild>
+		<RunAnalyzersDuringLiveAnalysis>False</RunAnalyzersDuringLiveAnalysis>
 	</PropertyGroup>
 
 	<!-- ★ 把 ico 注册为 WPF 资源 -->

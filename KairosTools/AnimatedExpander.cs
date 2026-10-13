@@ -9,23 +9,38 @@ namespace KairosTools
     {
         public static readonly DependencyProperty IsExpandedProperty =
             DependencyProperty.RegisterAttached(
-                "IsExpanded",
-                typeof(bool),
-                typeof(AnimatedExpander),
+                "IsExpanded", typeof(bool), typeof(AnimatedExpander),
                 new PropertyMetadata(false, OnIsExpandedChanged));
 
-        public static bool GetIsExpanded(DependencyObject obj)
-            => (bool)obj.GetValue(IsExpandedProperty);
-
-        public static void SetIsExpanded(DependencyObject obj, bool value)
-            => obj.SetValue(IsExpandedProperty, value);
+        public static bool GetIsExpanded(DependencyObject obj) => (bool)obj.GetValue(IsExpandedProperty);
+        public static void SetIsExpanded(DependencyObject obj, bool value) => obj.SetValue(IsExpandedProperty, value);
 
         private static void OnIsExpandedChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
             if (!(d is Border border)) return;
             bool expand = (bool)e.NewValue;
 
-            // ★ 关键：先读当前高度（动画进行中 Height 返回插值）
+            // 弱PC模式：直接切换
+            if (AppSettings.Instance.IsWeakPcMode)
+            {
+                border.BeginAnimation(FrameworkElement.HeightProperty, null);
+                border.BeginAnimation(UIElement.OpacityProperty, null);
+
+                if (expand)
+                {
+                    border.Visibility = Visibility.Visible;
+                    border.Height = double.NaN;
+                    border.Opacity = 1;
+                }
+                else
+                {
+                    border.Height = 0;
+                    border.Opacity = 0;
+                    border.Visibility = Visibility.Collapsed;
+                }
+                return;
+            }
+
             double currentHeight = border.Height;
             if (double.IsNaN(currentHeight) || currentHeight < 0)
                 currentHeight = border.ActualHeight;
@@ -33,11 +48,9 @@ namespace KairosTools
 
             double currentOpacity = border.Opacity;
 
-            // 再打断旧动画
             border.BeginAnimation(FrameworkElement.HeightProperty, null);
             border.BeginAnimation(UIElement.OpacityProperty, null);
 
-            // 恢复本地值等于当前状态，避免闪
             border.Height = currentHeight;
             border.Opacity = currentOpacity;
 
@@ -53,6 +66,17 @@ namespace KairosTools
                     EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut },
                     FillBehavior = FillBehavior.HoldEnd
                 };
+
+                // ★ 关键：动画完成后释放 Height，让布局自适应，避免改变窗口尺寸时出现空白
+                heightAnim.Completed += (s, ev) =>
+                {
+                    if (border.Visibility == Visibility.Visible)
+                    {
+                        border.BeginAnimation(FrameworkElement.HeightProperty, null);
+                        border.Height = double.NaN;
+                    }
+                };
+
                 border.BeginAnimation(FrameworkElement.HeightProperty, heightAnim);
 
                 var opAnim = new DoubleAnimation(currentOpacity, 1,
@@ -85,24 +109,20 @@ namespace KairosTools
 
         private static double MeasureTargetHeight(Border border, double currentHeight)
         {
-            // ★ 临时让高度自适应，准确测量目标高度
             border.Height = double.NaN;
 
             double width = border.ActualWidth;
             if (width <= 0)
             {
                 var parent = border.Parent as FrameworkElement;
-                if (parent != null && parent.ActualWidth > 0)
-                    width = parent.ActualWidth;
-                else
-                    width = 560;
+                if (parent != null && parent.ActualWidth > 0) width = parent.ActualWidth;
+                else width = 560;
             }
 
             border.Measure(new Size(width, double.PositiveInfinity));
             double h = border.DesiredSize.Height;
             if (h <= 0) h = 100;
 
-            // 恢复
             border.Height = currentHeight;
             return h;
         }

@@ -53,9 +53,8 @@ namespace KairosTools
             RunPowerShell("Disable-MMAgent -MemoryCompression");
         }
 
-        // ============ HAGS（硬件加速GPU调度） ============
+        // ============ HAGS ============
 
-        /// <summary>HwSchMode=2 表示启用，=1 表示禁用</summary>
         public static bool IsHagsEnabled()
         {
             string result = RunPowerShell(
@@ -78,7 +77,40 @@ namespace KairosTools
                 "-Name 'HwSchMode' -Value 1 -Type DWord");
         }
 
-        // ============ 通用：调 powershell.exe 执行 ============
+        // ============ 交付优化（Delivery Optimization） ============
+
+        /// <summary>
+        /// 判断交付优化的 P2P 共享是否启用。
+        /// DODownloadMode=0 表示禁用 P2P 共享（仅从微软服务器下载）。
+        /// 值不存在或不为 0 时视为启用。
+        /// </summary>
+        public static bool IsDeliveryOptimizationEnabled()
+        {
+            string result = RunPowerShell(
+                "(Get-ItemProperty -Path 'HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\DeliveryOptimization' " +
+                "-Name 'DODownloadMode' -ErrorAction SilentlyContinue).DODownloadMode");
+
+            if (string.IsNullOrWhiteSpace(result)) return true;
+            return result.Trim() != "0";
+        }
+
+        public static void EnableDeliveryOptimization()
+        {
+            // 删除策略值，恢复默认（启用 P2P）
+            RunPowerShell(
+                "Remove-ItemProperty -Path 'HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\DeliveryOptimization' " +
+                "-Name 'DODownloadMode' -ErrorAction SilentlyContinue");
+        }
+
+        public static void DisableDeliveryOptimization()
+        {
+            RunPowerShell(
+                "$path = 'HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\DeliveryOptimization'; " +
+                "if (-not (Test-Path $path)) { New-Item -Path $path -Force | Out-Null }; " +
+                "Set-ItemProperty -Path $path -Name 'DODownloadMode' -Value 0 -Type DWord");
+        }
+
+        // ============ 通用 ============
 
         private static string RunPowerShell(string command)
         {
@@ -99,7 +131,6 @@ namespace KairosTools
                 {
                     string output = proc.StandardOutput.ReadToEnd();
                     proc.WaitForExit(10000);
-
                     if (proc.ExitCode != 0) return null;
                     return output.Trim();
                 }

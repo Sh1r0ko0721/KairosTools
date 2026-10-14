@@ -344,6 +344,7 @@ namespace KairosTools
         private void PlaySlideInAnimation()
         {
             if (BasicItemsControl == null) return;
+
             if (IsWeakPcMode)
             {
                 BasicHeader.Opacity = 1;
@@ -356,6 +357,16 @@ namespace KairosTools
                 }
                 return;
             }
+
+            BasicHeader.Opacity = 0;
+            for (int i = 0; i < BasicItemsControl.Items.Count; i++)
+            {
+                var c = BasicItemsControl.ItemContainerGenerator.ContainerFromIndex(i) as ContentPresenter;
+                if (c == null) continue;
+                var root = VisualTreeHelper.GetChild(c, 0) as FrameworkElement;
+                if (root != null) root.Opacity = 0;
+            }
+
             AnimateSlideIn(BasicHeader, 0);
             for (int i = 0; i < BasicItemsControl.Items.Count; i++)
             {
@@ -363,7 +374,7 @@ namespace KairosTools
                 if (container == null) continue;
                 var root = VisualTreeHelper.GetChild(container, 0) as FrameworkElement;
                 if (root == null) continue;
-                AnimateSlideIn(root, (i + 1) * 70);
+                AnimateSlideIn(root, (i + 1) * 50);
             }
         }
 
@@ -381,51 +392,49 @@ namespace KairosTools
 
             ResetPowerElementsOpacity();
 
-            Dispatcher.BeginInvoke(new Action(() =>
+            // ★ 与基础优化一致：header 延迟 0，之后每项 stagger 70ms
+            int delay = 0;
+            AnimateSlideIn(PowerHeader, delay); delay += 50;
+
+            AnimateSlideIn(TipTitleBorder, delay); delay += 50;
+
+            if (IsTipExpanded && TipContentSection != null && TipContentSection.Visibility == Visibility.Visible)
             {
-                int delay = 0;
-                AnimateSlideIn(PowerHeader, delay); delay += 80;
-                AnimateSlideIn(TipTitleBorder, delay); delay += 60;
+                AnimateSlideIn(TipContentSection, delay);
+                delay += 50;
+            }
 
-                if (IsTipExpanded && TipContentSection != null && TipContentSection.Visibility == Visibility.Visible)
+            if (PowerPlansControl != null)
+            {
+                for (int i = 0; i < PowerPlansControl.Items.Count; i++)
                 {
-                    AnimateSlideIn(TipContentSection, delay);
-                    delay += 60;
+                    var container = PowerPlansControl.ItemContainerGenerator.ContainerFromIndex(i) as ContentPresenter;
+                    if (container == null) continue;
+                    var root = VisualTreeHelper.GetChild(container, 0) as FrameworkElement;
+                    if (root == null) continue;
+                    AnimateSlideIn(root, delay);
+                    delay += 50;
+                }
+            }
+
+            AnimateSlideIn(SettingsTitleSection, delay); delay += 50;
+
+            if (HibernateItemsControl != null)
+            {
+                for (int i = 0; i < HibernateItemsControl.Items.Count; i++)
+                {
+                    var container = HibernateItemsControl.ItemContainerGenerator.ContainerFromIndex(i) as ContentPresenter;
+                    if (container == null) continue;
+                    var root = VisualTreeHelper.GetChild(container, 0) as FrameworkElement;
+                    if (root != null) root.Opacity = 1;
                 }
 
-                if (PowerPlansControl != null)
-                {
-                    for (int i = 0; i < PowerPlansControl.Items.Count; i++)
-                    {
-                        var container = PowerPlansControl.ItemContainerGenerator.ContainerFromIndex(i) as ContentPresenter;
-                        if (container == null) continue;
-                        var root = VisualTreeHelper.GetChild(container, 0) as FrameworkElement;
-                        if (root == null) continue;
-                        AnimateSlideIn(root, delay);
-                        delay += 50;
-                    }
-                }
+                AnimateSlideIn(HibernateItemsControl, delay);
+                delay += 50;
+            }
 
-                AnimateSlideIn(SettingsTitleSection, delay); delay += 60;
-
-                // ★ 休眠：先把内部 item 的 Opacity 设为 1（模板里是 0），再把整个 ItemsControl 当整体滑入
-                if (HibernateItemsControl != null)
-                {
-                    for (int i = 0; i < HibernateItemsControl.Items.Count; i++)
-                    {
-                        var container = HibernateItemsControl.ItemContainerGenerator.ContainerFromIndex(i) as ContentPresenter;
-                        if (container == null) continue;
-                        var root = VisualTreeHelper.GetChild(container, 0) as FrameworkElement;
-                        if (root != null) root.Opacity = 1;
-                    }
-
-                    AnimateSlideIn(HibernateItemsControl, delay);
-                    delay += 60;
-                }
-
-                AnimateSlideIn(PresetTitleSection, delay); delay += 60;
-                AnimateSlideIn(KhorvieRow, delay);
-            }), DispatcherPriority.Render);
+            AnimateSlideIn(PresetTitleSection, delay); delay += 50;
+            AnimateSlideIn(KhorvieRow, delay);
         }
 
         private void ResetPowerElementsOpacity()
@@ -457,12 +466,12 @@ namespace KairosTools
             if (el == null) return;
             el.BeginAnimation(UIElement.OpacityProperty, null);
             el.Opacity = 0;
-            var tt = new TranslateTransform(-70, 0);
+            var tt = new TranslateTransform(-50, 0);
             el.RenderTransform = tt;
-            var opAnim = new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(280))
+            var opAnim = new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(200))
             { BeginTime = TimeSpan.FromMilliseconds(delayMs), EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } };
             el.BeginAnimation(UIElement.OpacityProperty, opAnim);
-            var xAnim = new DoubleAnimation(-70, 0, TimeSpan.FromMilliseconds(340))
+            var xAnim = new DoubleAnimation(-50, 0, TimeSpan.FromMilliseconds(240))
             { BeginTime = TimeSpan.FromMilliseconds(delayMs), EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } };
             tt.BeginAnimation(TranslateTransform.XProperty, xAnim);
         }
@@ -575,18 +584,6 @@ namespace KairosTools
 
         private void HideAllPages()
         {
-            // ★ 先清理所有"参与动画"元素的 Opacity 动画覆盖
-            // 让它们的 Opacity 回到 XAML 里设定的基础值（0），下次显示时就是透明的
-            ResetOpacityAnimations(PageHome);
-            ResetOpacityAnimations(PageOptimizePlan);
-            ResetOpacityAnimations(PageOptimizeBasic);
-            ResetOpacityAnimations(PageOptimizeSecurity);
-            ResetOpacityAnimations(PageOptimizePower);
-            ResetOpacityAnimations(PageOptimizePrivacy);
-            ResetOpacityAnimations(PageOptimizeTask);
-            ResetOpacityAnimations(PageSettings);
-            ResetOpacityAnimations(PageAbout);
-
             PageHome.Visibility = Visibility.Collapsed;
             PageOptimizePlan.Visibility = Visibility.Collapsed;
             PageOptimizeBasic.Visibility = Visibility.Collapsed;
@@ -661,19 +658,43 @@ namespace KairosTools
 
         private void ShowSubPage()
         {
-            if (SubOptimizePlan.IsChecked == true) { PageOptimizePlan.Visibility = Visibility.Visible; PlayFadeIn(PageOptimizePlan); }
+            if (SubOptimizePlan.IsChecked == true)
+            {
+                PageOptimizePlan.Visibility = Visibility.Visible;
+                PageOptimizePlan.UpdateLayout();
+                PlayFadeIn(PageOptimizePlan);
+            }
             else if (SubOptimizeBasic.IsChecked == true)
-            { PageOptimizeBasic.Visibility = Visibility.Visible; Dispatcher.BeginInvoke(new Action(PlaySlideInAnimation), DispatcherPriority.Loaded); }
-            else if (SubOptimizeSecurity.IsChecked == true) { PageOptimizeSecurity.Visibility = Visibility.Visible; PlayFadeIn(PageOptimizeSecurity); }
+            {
+                PageOptimizeBasic.Visibility = Visibility.Visible;
+                PageOptimizeBasic.UpdateLayout();
+                PlaySlideInAnimation();
+            }
+            else if (SubOptimizeSecurity.IsChecked == true)
+            {
+                PageOptimizeSecurity.Visibility = Visibility.Visible;
+                PageOptimizeSecurity.UpdateLayout();
+                PlayFadeIn(PageOptimizeSecurity);
+            }
             else if (SubOptimizePower.IsChecked == true)
             {
                 LoadPowerPlans();
                 PageOptimizePower.Visibility = Visibility.Visible;
-                // ★ 先让布局完成（生成 ContentPresenter），再播放动画
-                Dispatcher.BeginInvoke(new Action(PlayPowerSlideInAnimation), DispatcherPriority.Loaded);
+                PageOptimizePower.UpdateLayout();
+                PlayPowerSlideInAnimation();
             }
-            else if (SubOptimizePrivacy.IsChecked == true) { PageOptimizePrivacy.Visibility = Visibility.Visible; PlayFadeIn(PageOptimizePrivacy); }
-            else if (SubOptimizeTask.IsChecked == true) { PageOptimizeTask.Visibility = Visibility.Visible; PlayFadeIn(PageOptimizeTask); }
+            else if (SubOptimizePrivacy.IsChecked == true)
+            {
+                PageOptimizePrivacy.Visibility = Visibility.Visible;
+                PageOptimizePrivacy.UpdateLayout();
+                PlayFadeIn(PageOptimizePrivacy);
+            }
+            else if (SubOptimizeTask.IsChecked == true)
+            {
+                PageOptimizeTask.Visibility = Visibility.Visible;
+                PageOptimizeTask.UpdateLayout();
+                PlayFadeIn(PageOptimizeTask);
+            }
         }
     }
 }

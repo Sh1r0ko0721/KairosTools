@@ -56,16 +56,25 @@ namespace KairosTools
 
             border.BeginAnimation(FrameworkElement.HeightProperty, null);
             border.BeginAnimation(UIElement.OpacityProperty, null);
-            border.Height = currentHeight;
-            border.Opacity = currentOpacity;
 
             if (expand)
             {
                 border.Visibility = Visibility.Visible;
-                double targetHeight = MeasureHeight(border, currentHeight);
+
+                // ★ 精确测量：临时让高度自适应 + Opacity=0，同步布局，读出真实高度
+                double tempOpacity = currentOpacity;
+                border.Height = double.NaN;
+                border.Opacity = 0;
+                border.UpdateLayout();
+                double targetHeight = border.ActualHeight;
+                if (targetHeight <= 0) targetHeight = 100;
+
+                // 恢复起始状态，准备动画
+                border.Height = currentHeight;
+                border.Opacity = tempOpacity;
                 if (currentHeight >= targetHeight) currentHeight = targetHeight;
 
-                var hAnim = new DoubleAnimation(currentHeight, targetHeight, TimeSpan.FromMilliseconds(320))
+                var hAnim = new DoubleAnimation(currentHeight, targetHeight, TimeSpan.FromMilliseconds(260))
                 { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }, FillBehavior = FillBehavior.HoldEnd };
                 hAnim.Completed += (s, ev) =>
                 {
@@ -75,13 +84,16 @@ namespace KairosTools
                 };
                 border.BeginAnimation(FrameworkElement.HeightProperty, hAnim);
 
-                var oAnim = new DoubleAnimation(currentOpacity, 1, TimeSpan.FromMilliseconds(240))
+                var oAnim = new DoubleAnimation(tempOpacity, 1, TimeSpan.FromMilliseconds(200))
                 { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }, FillBehavior = FillBehavior.HoldEnd };
                 border.BeginAnimation(UIElement.OpacityProperty, oAnim);
             }
             else
             {
-                var hAnim = new DoubleAnimation(currentHeight, 0, TimeSpan.FromMilliseconds(280))
+                border.Height = currentHeight;
+                border.Opacity = currentOpacity;
+
+                var hAnim = new DoubleAnimation(currentHeight, 0, TimeSpan.FromMilliseconds(240))
                 { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }, FillBehavior = FillBehavior.HoldEnd };
                 hAnim.Completed += (s, ev) =>
                 {
@@ -92,27 +104,10 @@ namespace KairosTools
                 };
                 border.BeginAnimation(FrameworkElement.HeightProperty, hAnim);
 
-                var oAnim = new DoubleAnimation(currentOpacity, 0, TimeSpan.FromMilliseconds(220))
+                var oAnim = new DoubleAnimation(currentOpacity, 0, TimeSpan.FromMilliseconds(180))
                 { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }, FillBehavior = FillBehavior.HoldEnd };
                 border.BeginAnimation(UIElement.OpacityProperty, oAnim);
             }
-        }
-
-        private static double MeasureHeight(Border border, double currentHeight)
-        {
-            border.Height = double.NaN;
-            double width = border.ActualWidth;
-            if (width <= 0)
-            {
-                var parent = border.Parent as FrameworkElement;
-                if (parent != null && parent.ActualWidth > 0) width = parent.ActualWidth;
-                else width = 560;
-            }
-            border.Measure(new Size(width, double.PositiveInfinity));
-            double h = border.DesiredSize.Height;
-            if (h <= 0) h = 100;
-            border.Height = currentHeight;
-            return h;
         }
     }
 }

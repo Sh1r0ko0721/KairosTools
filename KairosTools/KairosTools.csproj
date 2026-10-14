@@ -29,4 +29,10 @@
 		<PackageReference Include="ModernWpfUI" Version="0.9.6" />
 	</ItemGroup>
 
+	<ItemGroup>
+		<Content Include="Assets\Khorvie.pow">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+	</ItemGroup>
+
 </Project>

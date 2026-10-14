@@ -4,24 +4,17 @@
         xmlns:local="clr-namespace:KairosTools"
         Icon="pack://application:,,,/app.ico"
         Title="KairosTools" Height="650" Width="1000"
-        WindowStartupLocation="CenterScreen"
-        WindowStyle="None"
-        ResizeMode="CanResize"
-        MinWidth="560"
-        MinHeight="500"
+        WindowStartupLocation="CenterScreen" WindowStyle="None"
+        ResizeMode="CanResize" MinWidth="620" MinHeight="500"
         Background="White"
         FontFamily="Microsoft YaHei UI, Microsoft YaHei, Segoe UI"
         TextOptions.TextFormattingMode="Display"
         TextOptions.TextRenderingMode="Grayscale"
-        UseLayoutRounding="True"
-        SnapsToDevicePixels="True">
+        UseLayoutRounding="True" SnapsToDevicePixels="True">
 
     <WindowChrome.WindowChrome>
-        <WindowChrome CaptionHeight="32"
-                      GlassFrameThickness="0"
-                      CornerRadius="0"
-                      ResizeBorderThickness="6"
-                      UseAeroCaptionButtons="False"/>
+        <WindowChrome CaptionHeight="32" GlassFrameThickness="0" CornerRadius="0"
+                      ResizeBorderThickness="6" UseAeroCaptionButtons="False"/>
     </WindowChrome.WindowChrome>
 
     <Window.Resources>
@@ -69,6 +62,7 @@
             </Setter>
         </Style>
 
+        <!-- ★ ScrollBar：hover 时播放放大（Opacity 淡入）动画，弱PC模式瞬时切换 -->
         <Style TargetType="ScrollBar">
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="Width" Value="14"/>
@@ -82,22 +76,55 @@
                                         <Thumb.Template>
                                             <ControlTemplate TargetType="Thumb">
                                                 <Grid Background="Transparent">
-                                                    <Border x:Name="barNormal"
-                                                            Width="6" CornerRadius="3"
-                                                            HorizontalAlignment="Center"
-                                                            VerticalAlignment="Stretch"
+                                                    <Border x:Name="barNormal" Width="6" CornerRadius="3"
+                                                            HorizontalAlignment="Center" VerticalAlignment="Stretch"
                                                             Background="#B0B0B0"/>
-                                                    <Border x:Name="barHover"
-                                                            Width="10" CornerRadius="5"
-                                                            HorizontalAlignment="Center"
-                                                            VerticalAlignment="Stretch"
-                                                            Background="#888888"
-                                                            Opacity="0"/>
+                                                    <Border x:Name="barHover" Width="10" CornerRadius="5"
+                                                            HorizontalAlignment="Center" VerticalAlignment="Stretch"
+                                                            Background="#888888" Opacity="0"/>
                                                 </Grid>
                                                 <ControlTemplate.Triggers>
-                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                    <!-- 正常模式：动画淡入/淡出 -->
+                                                    <MultiDataTrigger>
+                                                        <MultiDataTrigger.Conditions>
+                                                            <Condition Binding="{Binding IsMouseOver, RelativeSource={RelativeSource Self}}" Value="True"/>
+                                                            <Condition Binding="{Binding IsWeakPcMode, RelativeSource={RelativeSource AncestorType=Window}}" Value="False"/>
+                                                        </MultiDataTrigger.Conditions>
+                                                        <MultiDataTrigger.EnterActions>
+                                                            <BeginStoryboard>
+                                                                <Storyboard>
+                                                                    <DoubleAnimation Storyboard.TargetName="barHover"
+                                                                                     Storyboard.TargetProperty="Opacity"
+                                                                                     To="1" Duration="0:0:0.18">
+                                                                        <DoubleAnimation.EasingFunction>
+                                                                            <CubicEase EasingMode="EaseOut"/>
+                                                                        </DoubleAnimation.EasingFunction>
+                                                                    </DoubleAnimation>
+                                                                </Storyboard>
+                                                            </BeginStoryboard>
+                                                        </MultiDataTrigger.EnterActions>
+                                                        <MultiDataTrigger.ExitActions>
+                                                            <BeginStoryboard>
+                                                                <Storyboard>
+                                                                    <DoubleAnimation Storyboard.TargetName="barHover"
+                                                                                     Storyboard.TargetProperty="Opacity"
+                                                                                     To="0" Duration="0:0:0.18">
+                                                                        <DoubleAnimation.EasingFunction>
+                                                                            <CubicEase EasingMode="EaseOut"/>
+                                                                        </DoubleAnimation.EasingFunction>
+                                                                    </DoubleAnimation>
+                                                                </Storyboard>
+                                                            </BeginStoryboard>
+                                                        </MultiDataTrigger.ExitActions>
+                                                    </MultiDataTrigger>
+                                                    <!-- 弱PC：瞬时切换 -->
+                                                    <MultiDataTrigger>
+                                                        <MultiDataTrigger.Conditions>
+                                                            <Condition Binding="{Binding IsMouseOver, RelativeSource={RelativeSource Self}}" Value="True"/>
+                                                            <Condition Binding="{Binding IsWeakPcMode, RelativeSource={RelativeSource AncestorType=Window}}" Value="True"/>
+                                                        </MultiDataTrigger.Conditions>
                                                         <Setter TargetName="barHover" Property="Opacity" Value="1"/>
-                                                    </Trigger>
+                                                    </MultiDataTrigger>
                                                 </ControlTemplate.Triggers>
                                             </ControlTemplate>
                                         </Thumb.Template>
@@ -136,7 +163,7 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="ToggleButton">
-                        <Border x:Name="bd" Background="Transparent" CornerRadius="6" Height="40" Margin="8,2">
+                        <Border x:Name="bd" Background="Transparent" CornerRadius="6" Height="38" Margin="8,2">
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="3"/>
@@ -146,10 +173,9 @@
                                 <Border x:Name="indicator" Grid.Column="0" Background="Transparent" CornerRadius="2" Margin="0,8"/>
                                 <TextBlock x:Name="icon" Grid.Column="1" FontFamily="Segoe MDL2 Assets"
                                            Text="{TemplateBinding Tag}" FontSize="16"
-                                           Foreground="#0078D4"
-                                           Margin="14,0,12,0" VerticalAlignment="Center"/>
+                                           Foreground="#0078D4" Margin="14,0,12,0" VerticalAlignment="Center"/>
                                 <ContentPresenter Grid.Column="2" VerticalAlignment="Center"
-                                                  HorizontalAlignment="Left"/>
+                                                  HorizontalAlignment="Left" Margin="0,-2,0,0"/>
                             </Grid>
                         </Border>
                         <ControlTemplate.Triggers>
@@ -176,8 +202,8 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="RadioButton">
-                        <Border x:Name="bd" Background="Transparent" CornerRadius="6" Height="34" Margin="20,1,8,1">
-                            <ContentPresenter Margin="30,0,0,0" VerticalAlignment="Center"/>
+                        <Border x:Name="bd" Background="Transparent" CornerRadius="6" Height="32" Margin="20,1,8,1">
+                            <ContentPresenter Margin="33,-2,0,0" VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
@@ -229,16 +255,15 @@
             </Setter>
         </Style>
 
-        <Style x:Key="SettingsSwitchStyle" TargetType="ToggleButton">
+        <Style x:Key="WeakPcSwitchStyle" TargetType="ToggleButton">
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="ToggleButton">
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <TextBlock x:Name="statusText" Text="已关闭"
-                                       FontSize="12" Foreground="#E74C3C"
-                                       VerticalAlignment="Center" Margin="0,0,10,0"/>
+                            <TextBlock x:Name="statusText" Text="已禁用" FontSize="12"
+                                       Foreground="#E74C3C" VerticalAlignment="Center" Margin="0,0,10,0"/>
                             <Grid Width="40" Height="20">
                                 <Border x:Name="track" CornerRadius="10" Background="#E74C3C"/>
                                 <Border x:Name="thumb" Width="16" Height="16" CornerRadius="8"
@@ -248,11 +273,18 @@
                         </StackPanel>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsChecked" Value="True">
-                                <Setter TargetName="statusText" Property="Text" Value="已开启"/>
+                                <Setter TargetName="statusText" Property="Text" Value="已启用"/>
                                 <Setter TargetName="statusText" Property="Foreground" Value="#0078D4"/>
                                 <Setter TargetName="track" Property="Background" Value="#0078D4"/>
                                 <Setter TargetName="thumb" Property="HorizontalAlignment" Value="Right"/>
                                 <Setter TargetName="thumb" Property="Margin" Value="0,0,2,0"/>
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="False">
+                                <Setter TargetName="statusText" Property="Text" Value="已禁用"/>
+                                <Setter TargetName="statusText" Property="Foreground" Value="#E74C3C"/>
+                                <Setter TargetName="track" Property="Background" Value="#E74C3C"/>
+                                <Setter TargetName="thumb" Property="HorizontalAlignment" Value="Left"/>
+                                <Setter TargetName="thumb" Property="Margin" Value="2,0,0,0"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -266,7 +298,7 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="ToggleButton">
-                        <Border Background="Transparent" Padding="0,14">
+                        <Border Background="Transparent" Padding="0,12">
                             <ContentPresenter/>
                         </Border>
                     </ControlTemplate>
@@ -274,12 +306,10 @@
             </Setter>
         </Style>
 
-        <!-- ★ LinkButtonStyle：无 BitmapCache，避免放大时模糊 -->
         <Style x:Key="LinkButtonStyle" TargetType="Button">
             <Setter Property="TextOptions.TextFormattingMode" Value="Ideal"/>
             <Setter Property="TextOptions.TextRenderingMode" Value="Grayscale"/>
             <Setter Property="RenderOptions.BitmapScalingMode" Value="HighQuality"/>
-            <!-- ★ 关键：CacheMode 放在 Button 上，RenderAtScale=3 让放大后依然锐利 -->
             <Setter Property="CacheMode">
                 <Setter.Value>
                     <BitmapCache RenderAtScale="3" EnableClearType="True" SnapsToDevicePixels="False"/>
@@ -294,15 +324,167 @@
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
                         <Border x:Name="bd" Background="White"
-                        BorderBrush="#0078D4" BorderThickness="1.5"
-                        CornerRadius="10" Padding="40,14"
-                        RenderTransformOrigin="0.5,0.5">
+                                BorderBrush="#0078D4" BorderThickness="1.5"
+                                CornerRadius="10" Padding="40,14"
+                                RenderTransformOrigin="0.5,0.5">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
         </Style>
+
+        <Style x:Key="ActionBtnBlueStyle" TargetType="Button">
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bd" Background="#0078D4" CornerRadius="6" Padding="16,5">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="#0066BB"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="ActionBtnRedStyle" TargetType="Button">
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bd" Background="#E74C3C" CornerRadius="6" Padding="16,5">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="#D04030"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- ★ 可调整项：填充 #F4F7FC（更浅），简介文字 #444444（深灰，对比度更高） -->
+        <DataTemplate x:Key="ToggleItemTemplate">
+            <Border Background="#F4F7FC" CornerRadius="8" Margin="0,0,0,6" Opacity="0"
+                    RenderTransformOrigin="0.5,0.5">
+                <Border.RenderTransform>
+                    <TranslateTransform X="0"/>
+                </Border.RenderTransform>
+                <StackPanel>
+                    <Grid Height="46" Margin="14,0,14,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <ToggleButton Grid.Column="0"
+                                      IsChecked="{Binding IsExpanded, Mode=TwoWay}"
+                                      Style="{StaticResource ItemHeaderButtonStyle}"
+                                      HorizontalContentAlignment="Left"
+                                      VerticalAlignment="Center">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <TextBlock Text="{Binding Name}" FontSize="14" FontWeight="SemiBold"
+                                           VerticalAlignment="Center"/>
+                                <TextBlock x:Name="arrow" FontFamily="Segoe MDL2 Assets"
+                                           Text="&#xE76C;" FontSize="8" Foreground="#888888"
+                                           Margin="6,2,0,0" VerticalAlignment="Center"
+                                           RenderTransformOrigin="0.5,0.5">
+                                    <TextBlock.RenderTransform>
+                                        <RotateTransform Angle="0"/>
+                                    </TextBlock.RenderTransform>
+                                </TextBlock>
+                            </StackPanel>
+                        </ToggleButton>
+                        <ToggleButton Grid.Column="1"
+                                      IsChecked="{Binding IsOn, Mode=TwoWay}"
+                                      Style="{StaticResource SwitchStyle}"
+                                      VerticalAlignment="Center"/>
+                    </Grid>
+
+                    <Border local:AnimatedExpander.IsExpanded="{Binding IsExpanded}"
+                            ClipToBounds="True" Opacity="0" Height="0" Visibility="Collapsed">
+                        <Border Padding="14,0,14,14">
+                            <StackPanel>
+                                <TextBlock Text="{Binding Description}" TextWrapping="Wrap"
+                                           Foreground="#444444" FontSize="13" LineHeight="20"/>
+                                <TextBlock Text="{Binding RecommendText}" FontSize="12"
+                                           Foreground="#0078D4" Margin="0,10,0,0"
+                                           TextWrapping="Wrap" LineHeight="18"/>
+                            </StackPanel>
+                        </Border>
+                    </Border>
+                </StackPanel>
+            </Border>
+
+            <DataTemplate.Triggers>
+                <MultiDataTrigger>
+                    <MultiDataTrigger.Conditions>
+                        <Condition Binding="{Binding IsExpanded}" Value="True"/>
+                        <Condition Binding="{Binding IsWeakPcMode}" Value="True"/>
+                    </MultiDataTrigger.Conditions>
+                    <Setter TargetName="arrow" Property="RenderTransform">
+                        <Setter.Value>
+                            <RotateTransform Angle="90"/>
+                        </Setter.Value>
+                    </Setter>
+                </MultiDataTrigger>
+                <MultiDataTrigger>
+                    <MultiDataTrigger.Conditions>
+                        <Condition Binding="{Binding IsExpanded}" Value="False"/>
+                        <Condition Binding="{Binding IsWeakPcMode}" Value="True"/>
+                    </MultiDataTrigger.Conditions>
+                    <Setter TargetName="arrow" Property="RenderTransform">
+                        <Setter.Value>
+                            <RotateTransform Angle="0"/>
+                        </Setter.Value>
+                    </Setter>
+                </MultiDataTrigger>
+                <MultiDataTrigger>
+                    <MultiDataTrigger.Conditions>
+                        <Condition Binding="{Binding IsExpanded}" Value="True"/>
+                        <Condition Binding="{Binding IsWeakPcMode}" Value="False"/>
+                    </MultiDataTrigger.Conditions>
+                    <MultiDataTrigger.EnterActions>
+                        <BeginStoryboard>
+                            <Storyboard>
+                                <DoubleAnimation Storyboard.TargetName="arrow"
+                                                 Storyboard.TargetProperty="(UIElement.RenderTransform).(RotateTransform.Angle)"
+                                                 To="90" Duration="0:0:0.25">
+                                    <DoubleAnimation.EasingFunction>
+                                        <CubicEase EasingMode="EaseOut"/>
+                                    </DoubleAnimation.EasingFunction>
+                                </DoubleAnimation>
+                            </Storyboard>
+                        </BeginStoryboard>
+                    </MultiDataTrigger.EnterActions>
+                    <MultiDataTrigger.ExitActions>
+                        <BeginStoryboard>
+                            <Storyboard>
+                                <DoubleAnimation Storyboard.TargetName="arrow"
+                                                 Storyboard.TargetProperty="(UIElement.RenderTransform).(RotateTransform.Angle)"
+                                                 To="0" Duration="0:0:0.25">
+                                    <DoubleAnimation.EasingFunction>
+                                        <CubicEase EasingMode="EaseOut"/>
+                                    </DoubleAnimation.EasingFunction>
+                                </DoubleAnimation>
+                            </Storyboard>
+                        </BeginStoryboard>
+                    </MultiDataTrigger.ExitActions>
+                </MultiDataTrigger>
+            </DataTemplate.Triggers>
+        </DataTemplate>
     </Window.Resources>
 
     <Grid x:Name="RootGrid">
@@ -318,19 +500,14 @@
                         <RowDefinition Height="78"/>
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
-
                     <TextBlock Grid.Row="0" Text="KairosTools" FontSize="18" FontWeight="Bold"
-                               Foreground="#0078D4"
-                               Margin="20,0,0,0"
-                               VerticalAlignment="Center"/>
-
+                               Foreground="#0078D4" Margin="20,0,0,0" VerticalAlignment="Center"/>
                     <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto"
                                   local:ScrollBarFade.IsEnabled="True">
                         <StackPanel Margin="0,-2,0,16">
                             <RadioButton x:Name="NavHome" GroupName="Nav" Tag="&#xE80F;"
                                          Content="主页" Style="{StaticResource NavButtonStyle}"
                                          IsChecked="True" Checked="Nav_Checked"/>
-
                             <ToggleButton x:Name="NavOptimize" Tag="&#xE945;"
                                           Style="{StaticResource NavButtonStyle}"
                                           Checked="NavOptimize_Checked"
@@ -339,7 +516,7 @@
                                     <TextBlock Text="优化" VerticalAlignment="Center"/>
                                     <TextBlock x:Name="OptimizeArrow" FontFamily="Segoe MDL2 Assets"
                                                Text="&#xE76C;" FontSize="8" Foreground="#888888"
-                                               Margin="6,1,0,0" VerticalAlignment="Center"
+                                               Margin="6,2,0,0" VerticalAlignment="Center"
                                                RenderTransformOrigin="0.5,0.5">
                                         <TextBlock.RenderTransform>
                                             <RotateTransform Angle="0"/>
@@ -347,10 +524,7 @@
                                     </TextBlock>
                                 </StackPanel>
                             </ToggleButton>
-
-                            <Border x:Name="OptimizeSubMenuBorder"
-                                    Height="0" Visibility="Collapsed"
-                                    ClipToBounds="True">
+                            <Border x:Name="OptimizeSubMenuBorder" Height="0" Visibility="Collapsed" ClipToBounds="True">
                                 <StackPanel>
                                     <RadioButton x:Name="SubOptimizePlan" GroupName="SubNav" Content="调整方案"
                                                  Style="{StaticResource SubNavButtonStyle}" Checked="SubNav_Checked"/>
@@ -366,11 +540,9 @@
                                                  Style="{StaticResource SubNavButtonStyle}" Checked="SubNav_Checked"/>
                                 </StackPanel>
                             </Border>
-
                             <RadioButton x:Name="NavSettings" GroupName="Nav" Tag="&#xE713;"
                                          Content="设置" Style="{StaticResource NavButtonStyle}"
                                          Checked="Nav_Checked"/>
-
                             <RadioButton x:Name="NavAbout" GroupName="Nav" Tag="&#xE946;"
                                          Content="关于" Style="{StaticResource NavButtonStyle}"
                                          Checked="Nav_Checked"/>
@@ -381,16 +553,14 @@
 
             <Grid Grid.Column="1" Background="White" ClipToBounds="True">
                 <Grid x:Name="PageHome">
-                    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center"
-                                Margin="0,0,0,4">
+                    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0,0,0,4">
                         <TextBlock Text="欢迎使用 KairosTools" FontSize="28" FontWeight="SemiBold" HorizontalAlignment="Center"/>
                         <TextBlock Text="从左侧选择功能开始" FontSize="14" Foreground="Gray" Margin="0,10,0,0" HorizontalAlignment="Center"/>
                     </StackPanel>
                 </Grid>
 
                 <Grid x:Name="PageOptimizePlan" Visibility="Collapsed">
-                    <TextBlock Text="调整方案" FontSize="24" HorizontalAlignment="Center" VerticalAlignment="Center"
-                               Margin="0,0,0,4"/>
+                    <TextBlock Text="调整方案" FontSize="24" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,0,0,4"/>
                 </Grid>
 
                 <Grid x:Name="PageOptimizeBasic" Visibility="Collapsed">
@@ -398,159 +568,300 @@
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
-
                     <StackPanel x:Name="BasicHeader" Grid.Row="0" Margin="30,24,30,12" Opacity="0">
                         <TextBlock Text="基础优化" FontSize="22" FontWeight="SemiBold"/>
                         <TextBlock Text="常用的系统基础优化项，点击项目名称查看详细说明"
                                    FontSize="12" Foreground="Gray" Margin="0,4,0,0"/>
                     </StackPanel>
-
                     <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto"
                                   local:ScrollBarFade.IsEnabled="True">
                         <ItemsControl x:Name="BasicItemsControl"
-                                      ItemsSource="{Binding BasicItems}" Margin="30,0,30,24">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <Border BorderBrush="#EFEFEF" BorderThickness="0,0,0,1" Opacity="0"
-                                            RenderTransformOrigin="0.5,0.5">
-                                        <Border.RenderTransform>
-                                            <TranslateTransform X="0"/>
-                                        </Border.RenderTransform>
-                                        <StackPanel>
-                                            <Grid Height="52">
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="*"/>
-                                                    <ColumnDefinition Width="Auto"/>
-                                                </Grid.ColumnDefinitions>
-
-                                                <ToggleButton Grid.Column="0"
-                                                              IsChecked="{Binding IsExpanded, Mode=TwoWay}"
-                                                              Style="{StaticResource ItemHeaderButtonStyle}"
-                                                              HorizontalContentAlignment="Left">
-                                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                                        <TextBlock Text="{Binding Name}"
-                                                                   FontSize="14" FontWeight="SemiBold"
-                                                                   VerticalAlignment="Center"/>
-                                                        <TextBlock x:Name="arrow" FontFamily="Segoe MDL2 Assets"
-                                                                   Text="&#xE76C;" FontSize="8" Foreground="#888888"
-                                                                   Margin="6,1,0,0" VerticalAlignment="Center"
-                                                                   RenderTransformOrigin="0.5,0.5">
-                                                            <TextBlock.RenderTransform>
-                                                                <RotateTransform Angle="0"/>
-                                                            </TextBlock.RenderTransform>
-                                                        </TextBlock>
-                                                    </StackPanel>
-                                                </ToggleButton>
-
-                                                <ToggleButton Grid.Column="1"
-                                                              IsChecked="{Binding IsOn, Mode=TwoWay}"
-                                                              Style="{StaticResource SwitchStyle}"
-                                                              VerticalAlignment="Center"/>
-                                            </Grid>
-
-                                            <Border local:AnimatedExpander.IsExpanded="{Binding IsExpanded}"
-                                                    ClipToBounds="True"
-                                                    Opacity="0"
-                                                    Height="0"
-                                                    Visibility="Collapsed">
-                                                <Border Padding="0,0,0,16">
-                                                    <StackPanel>
-                                                        <TextBlock Text="{Binding Description}" TextWrapping="Wrap"
-                                                                   Foreground="#666666" FontSize="13" LineHeight="20"/>
-                                                        <TextBlock Text="{Binding RecommendText}" FontSize="12"
-                                                                   Foreground="#0078D4" Margin="0,10,0,0"
-                                                                   TextWrapping="Wrap" LineHeight="18"/>
-                                                    </StackPanel>
-                                                </Border>
-                                            </Border>
-                                        </StackPanel>
-                                    </Border>
-
-                                    <DataTemplate.Triggers>
-                                        <!-- ★ 展开 + 弱PC：静态设置角度，无动画 -->
-                                        <MultiDataTrigger>
-                                            <MultiDataTrigger.Conditions>
-                                                <Condition Binding="{Binding IsExpanded}" Value="True"/>
-                                                <Condition Binding="{Binding IsWeakPcMode}" Value="True"/>
-                                            </MultiDataTrigger.Conditions>
-                                            <Setter TargetName="arrow" Property="RenderTransform">
-                                                <Setter.Value>
-                                                    <RotateTransform Angle="90"/>
-                                                </Setter.Value>
-                                            </Setter>
-                                        </MultiDataTrigger>
-                                        <MultiDataTrigger>
-                                            <MultiDataTrigger.Conditions>
-                                                <Condition Binding="{Binding IsExpanded}" Value="False"/>
-                                                <Condition Binding="{Binding IsWeakPcMode}" Value="True"/>
-                                            </MultiDataTrigger.Conditions>
-                                            <Setter TargetName="arrow" Property="RenderTransform">
-                                                <Setter.Value>
-                                                    <RotateTransform Angle="0"/>
-                                                </Setter.Value>
-                                            </Setter>
-                                        </MultiDataTrigger>
-
-                                        <!-- ★ 展开 + 正常：动画 -->
-                                        <MultiDataTrigger>
-                                            <MultiDataTrigger.Conditions>
-                                                <Condition Binding="{Binding IsExpanded}" Value="True"/>
-                                                <Condition Binding="{Binding IsWeakPcMode}" Value="False"/>
-                                            </MultiDataTrigger.Conditions>
-                                            <MultiDataTrigger.EnterActions>
-                                                <BeginStoryboard>
-                                                    <Storyboard>
-                                                        <DoubleAnimation
-                                                            Storyboard.TargetName="arrow"
-                                                            Storyboard.TargetProperty="(UIElement.RenderTransform).(RotateTransform.Angle)"
-                                                            To="90" Duration="0:0:0.25">
-                                                            <DoubleAnimation.EasingFunction>
-                                                                <CubicEase EasingMode="EaseOut"/>
-                                                            </DoubleAnimation.EasingFunction>
-                                                        </DoubleAnimation>
-                                                    </Storyboard>
-                                                </BeginStoryboard>
-                                            </MultiDataTrigger.EnterActions>
-                                            <MultiDataTrigger.ExitActions>
-                                                <BeginStoryboard>
-                                                    <Storyboard>
-                                                        <DoubleAnimation
-                                                            Storyboard.TargetName="arrow"
-                                                            Storyboard.TargetProperty="(UIElement.RenderTransform).(RotateTransform.Angle)"
-                                                            To="0" Duration="0:0:0.25">
-                                                            <DoubleAnimation.EasingFunction>
-                                                                <CubicEase EasingMode="EaseOut"/>
-                                                            </DoubleAnimation.EasingFunction>
-                                                        </DoubleAnimation>
-                                                    </Storyboard>
-                                                </BeginStoryboard>
-                                            </MultiDataTrigger.ExitActions>
-                                        </MultiDataTrigger>
-                                    </DataTemplate.Triggers>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
+                                      ItemsSource="{Binding BasicItems}" Margin="30,0,30,24"
+                                      ItemTemplate="{StaticResource ToggleItemTemplate}"/>
                     </ScrollViewer>
                 </Grid>
 
                 <Grid x:Name="PageOptimizeSecurity" Visibility="Collapsed">
-                    <TextBlock Text="安全优化" FontSize="24" HorizontalAlignment="Center" VerticalAlignment="Center"
-                               Margin="0,0,0,4"/>
+                    <TextBlock Text="安全优化" FontSize="24" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,0,0,4"/>
                 </Grid>
 
+                <!-- ★ 电源管理页 -->
                 <Grid x:Name="PageOptimizePower" Visibility="Collapsed">
-                    <TextBlock Text="电源管理" FontSize="24" HorizontalAlignment="Center" VerticalAlignment="Center"
-                               Margin="0,0,0,4"/>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    <StackPanel x:Name="PowerHeader" Grid.Row="0" Margin="30,24,30,12" Opacity="0">
+                        <TextBlock Text="电源管理" FontSize="22" FontWeight="SemiBold"/>
+                        <TextBlock Text="管理电源计划及相关设置" FontSize="12" Foreground="Gray" Margin="0,4,0,0"/>
+                    </StackPanel>
+
+                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto"
+                                  local:ScrollBarFade.IsEnabled="True">
+                        <StackPanel x:Name="PowerContentPanel" Margin="30,0,30,24">
+
+                            <!-- 您的方案 + 提示 -->
+                            <Grid x:Name="TipTitleBorder" Height="36" Opacity="0" Margin="0,0,0,6">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="您的方案" FontSize="17" FontWeight="SemiBold"
+                                           VerticalAlignment="Center" Margin="5,0,0,0"/>
+                                <ToggleButton Grid.Column="1" x:Name="TipToggle"
+                                              Margin="8,2,0,0" VerticalAlignment="Center"
+                                              IsChecked="{Binding IsTipExpanded, Mode=TwoWay}"
+                                              Cursor="Hand" FocusVisualStyle="{x:Null}">
+                                    <ToggleButton.Template>
+                                        <ControlTemplate TargetType="ToggleButton">
+                                            <Border x:Name="bd" Background="Transparent" CornerRadius="4" Padding="8,3">
+                                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                    <TextBlock Text="提示" FontSize="12" Foreground="#0078D4"
+                                                               VerticalAlignment="Center"/>
+                                                    <TextBlock x:Name="tipArrow" FontFamily="Segoe MDL2 Assets"
+                                                               Text="&#xE76C;" FontSize="8" Foreground="#0078D4"
+                                                               Margin="5,1,0,0" VerticalAlignment="Center"
+                                                               RenderTransformOrigin="0.5,0.5">
+                                                        <TextBlock.RenderTransform>
+                                                            <RotateTransform Angle="0"/>
+                                                        </TextBlock.RenderTransform>
+                                                    </TextBlock>
+                                                </StackPanel>
+                                            </Border>
+                                            <ControlTemplate.Triggers>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter TargetName="bd" Property="Background" Value="#E8F0FE"/>
+                                                </Trigger>
+                                                <MultiDataTrigger>
+                                                    <MultiDataTrigger.Conditions>
+                                                        <Condition Binding="{Binding IsChecked, RelativeSource={RelativeSource Self}}" Value="True"/>
+                                                        <Condition Binding="{Binding IsWeakPcMode}" Value="True"/>
+                                                    </MultiDataTrigger.Conditions>
+                                                    <Setter TargetName="tipArrow" Property="RenderTransform">
+                                                        <Setter.Value>
+                                                            <RotateTransform Angle="90"/>
+                                                        </Setter.Value>
+                                                    </Setter>
+                                                </MultiDataTrigger>
+                                                <MultiDataTrigger>
+                                                    <MultiDataTrigger.Conditions>
+                                                        <Condition Binding="{Binding IsChecked, RelativeSource={RelativeSource Self}}" Value="False"/>
+                                                        <Condition Binding="{Binding IsWeakPcMode}" Value="True"/>
+                                                    </MultiDataTrigger.Conditions>
+                                                    <Setter TargetName="tipArrow" Property="RenderTransform">
+                                                        <Setter.Value>
+                                                            <RotateTransform Angle="0"/>
+                                                        </Setter.Value>
+                                                    </Setter>
+                                                </MultiDataTrigger>
+                                                <MultiDataTrigger>
+                                                    <MultiDataTrigger.Conditions>
+                                                        <Condition Binding="{Binding IsChecked, RelativeSource={RelativeSource Self}}" Value="True"/>
+                                                        <Condition Binding="{Binding IsWeakPcMode}" Value="False"/>
+                                                    </MultiDataTrigger.Conditions>
+                                                    <MultiDataTrigger.EnterActions>
+                                                        <BeginStoryboard>
+                                                            <Storyboard>
+                                                                <DoubleAnimation Storyboard.TargetName="tipArrow"
+                                                                                 Storyboard.TargetProperty="(UIElement.RenderTransform).(RotateTransform.Angle)"
+                                                                                 To="90" Duration="0:0:0.25">
+                                                                    <DoubleAnimation.EasingFunction>
+                                                                        <CubicEase EasingMode="EaseOut"/>
+                                                                    </DoubleAnimation.EasingFunction>
+                                                                </DoubleAnimation>
+                                                            </Storyboard>
+                                                        </BeginStoryboard>
+                                                    </MultiDataTrigger.EnterActions>
+                                                    <MultiDataTrigger.ExitActions>
+                                                        <BeginStoryboard>
+                                                            <Storyboard>
+                                                                <DoubleAnimation Storyboard.TargetName="tipArrow"
+                                                                                 Storyboard.TargetProperty="(UIElement.RenderTransform).(RotateTransform.Angle)"
+                                                                                 To="0" Duration="0:0:0.25">
+                                                                    <DoubleAnimation.EasingFunction>
+                                                                        <CubicEase EasingMode="EaseOut"/>
+                                                                    </DoubleAnimation.EasingFunction>
+                                                                </DoubleAnimation>
+                                                            </Storyboard>
+                                                        </BeginStoryboard>
+                                                    </MultiDataTrigger.ExitActions>
+                                                </MultiDataTrigger>
+                                            </ControlTemplate.Triggers>
+                                        </ControlTemplate>
+                                    </ToggleButton.Template>
+                                </ToggleButton>
+                            </Grid>
+
+                            <Border x:Name="TipContentSection"
+                                    local:AnimatedExpander.IsExpanded="{Binding IsTipExpanded}"
+                                    ClipToBounds="True" Opacity="0" Height="0" Visibility="Collapsed">
+                                <Border Padding="0,4,0,12">
+                                    <TextBlock TextWrapping="Wrap" Foreground="#444444" FontSize="13" LineHeight="20"
+                   Text="这是您计算机上的电源计划。电源计划对计算机性能有很大影响。如果您使用笔记本电脑且不确定散热情况，请选择“平衡”。如果您是台式机且为AMD CPU 可以使用我们收录的“Khorvie's PowerPlan”。"/>
+                                </Border>
+                            </Border>
+
+                            <ItemsControl x:Name="PowerPlansControl" ItemsSource="{Binding PowerPlans}" Margin="0,0,0,16">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Background="#F4F7FC" CornerRadius="8" Margin="0,0,0,6"
+                                                Padding="14,0,14,0" Opacity="0">
+                                            <Grid Height="46">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                                                    <TextBlock Text="{Binding Name}" FontSize="14"
+                                                               FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                                    <TextBlock Text="当前活动" FontSize="11" Foreground="#10B981"
+                                                               Margin="8,2,0,0" VerticalAlignment="Center"
+                                                               Visibility="{Binding IsActive, Converter={StaticResource BoolToVis}}"/>
+                                                </StackPanel>
+                                                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                                    <Button Content="启用" Tag="{Binding Guid}" Click="ActivatePlan_Click"
+                                                            Style="{StaticResource ActionBtnBlueStyle}" Margin="0,0,8,0"/>
+                                                    <Button Content="删除" Tag="{Binding Guid}" Click="DeletePlan_Click"
+                                                            Style="{StaticResource ActionBtnRedStyle}"/>
+                                                </StackPanel>
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+
+                            <TextBlock x:Name="SettingsTitleSection" Text="设置" FontSize="17"
+                                       FontWeight="SemiBold" Opacity="0"
+                                       Margin="5,0,0,6"/>
+
+                            <ItemsControl x:Name="HibernateItemsControl" Opacity="0"
+                                          ItemsSource="{Binding HibernateItems}"
+                                          ItemTemplate="{StaticResource ToggleItemTemplate}"/>
+
+                            <TextBlock x:Name="PresetTitleSection" Text="预设" FontSize="17"
+                                       FontWeight="SemiBold" Opacity="0"
+                                       Margin="5,20,0,6"/>
+
+                            <!-- ★ Khorvie 行：把展开内容放进同一个框里，让框跟着变大 -->
+                            <Border x:Name="KhorvieRow" Opacity="0"
+                                    Background="#F4F7FC" CornerRadius="8"
+                                    Margin="0,0,0,6">
+                                <StackPanel>
+                                    <Grid Height="46" Margin="14,0,14,0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <ToggleButton Grid.Column="0" x:Name="PresetToggle"
+                                                      HorizontalAlignment="Left" VerticalAlignment="Center"
+                                                      IsChecked="{Binding IsPresetExpanded, Mode=TwoWay}"
+                                                      Cursor="Hand" FocusVisualStyle="{x:Null}"
+                                                      HorizontalContentAlignment="Left">
+                                            <ToggleButton.Template>
+                                                <ControlTemplate TargetType="ToggleButton">
+                                                    <Border Background="Transparent" Padding="0,12">
+                                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                            <TextBlock Text="Khorvie's PowerPlan" FontSize="14"
+                                                                       FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                                            <TextBlock x:Name="presetArrow" FontFamily="Segoe MDL2 Assets"
+                                                                       Text="&#xE76C;" FontSize="8" Foreground="#888888"
+                                                                       Margin="6,2,0,0" VerticalAlignment="Center"
+                                                                       RenderTransformOrigin="0.5,0.5">
+                                                                <TextBlock.RenderTransform>
+                                                                    <RotateTransform Angle="0"/>
+                                                                </TextBlock.RenderTransform>
+                                                            </TextBlock>
+                                                        </StackPanel>
+                                                    </Border>
+                                                    <ControlTemplate.Triggers>
+                                                        <MultiDataTrigger>
+                                                            <MultiDataTrigger.Conditions>
+                                                                <Condition Binding="{Binding IsChecked, RelativeSource={RelativeSource Self}}" Value="True"/>
+                                                                <Condition Binding="{Binding IsWeakPcMode}" Value="True"/>
+                                                            </MultiDataTrigger.Conditions>
+                                                            <Setter TargetName="presetArrow" Property="RenderTransform">
+                                                                <Setter.Value>
+                                                                    <RotateTransform Angle="90"/>
+                                                                </Setter.Value>
+                                                            </Setter>
+                                                        </MultiDataTrigger>
+                                                        <MultiDataTrigger>
+                                                            <MultiDataTrigger.Conditions>
+                                                                <Condition Binding="{Binding IsChecked, RelativeSource={RelativeSource Self}}" Value="False"/>
+                                                                <Condition Binding="{Binding IsWeakPcMode}" Value="True"/>
+                                                            </MultiDataTrigger.Conditions>
+                                                            <Setter TargetName="presetArrow" Property="RenderTransform">
+                                                                <Setter.Value>
+                                                                    <RotateTransform Angle="0"/>
+                                                                </Setter.Value>
+                                                            </Setter>
+                                                        </MultiDataTrigger>
+                                                        <MultiDataTrigger>
+                                                            <MultiDataTrigger.Conditions>
+                                                                <Condition Binding="{Binding IsChecked, RelativeSource={RelativeSource Self}}" Value="True"/>
+                                                                <Condition Binding="{Binding IsWeakPcMode}" Value="False"/>
+                                                            </MultiDataTrigger.Conditions>
+                                                            <MultiDataTrigger.EnterActions>
+                                                                <BeginStoryboard>
+                                                                    <Storyboard>
+                                                                        <DoubleAnimation Storyboard.TargetName="presetArrow"
+                                                                                         Storyboard.TargetProperty="(UIElement.RenderTransform).(RotateTransform.Angle)"
+                                                                                         To="90" Duration="0:0:0.25">
+                                                                            <DoubleAnimation.EasingFunction>
+                                                                                <CubicEase EasingMode="EaseOut"/>
+                                                                            </DoubleAnimation.EasingFunction>
+                                                                        </DoubleAnimation>
+                                                                    </Storyboard>
+                                                                </BeginStoryboard>
+                                                            </MultiDataTrigger.EnterActions>
+                                                            <MultiDataTrigger.ExitActions>
+                                                                <BeginStoryboard>
+                                                                    <Storyboard>
+                                                                        <DoubleAnimation Storyboard.TargetName="presetArrow"
+                                                                                         Storyboard.TargetProperty="(UIElement.RenderTransform).(RotateTransform.Angle)"
+                                                                                         To="0" Duration="0:0:0.25">
+                                                                            <DoubleAnimation.EasingFunction>
+                                                                                <CubicEase EasingMode="EaseOut"/>
+                                                                            </DoubleAnimation.EasingFunction>
+                                                                        </DoubleAnimation>
+                                                                    </Storyboard>
+                                                                </BeginStoryboard>
+                                                            </MultiDataTrigger.ExitActions>
+                                                        </MultiDataTrigger>
+                                                    </ControlTemplate.Triggers>
+                                                </ControlTemplate>
+                                            </ToggleButton.Template>
+                                        </ToggleButton>
+                                        <Button Grid.Column="1" Content="导入" Click="ImportKhorvie_Click"
+                                                Style="{StaticResource ActionBtnBlueStyle}"
+                                                VerticalAlignment="Center"/>
+                                    </Grid>
+
+                                    <!-- ★ 展开内容在框内：Border 高度增长 -->
+                                    <Border local:AnimatedExpander.IsExpanded="{Binding IsPresetExpanded}"
+                                            ClipToBounds="True" Opacity="0" Height="0" Visibility="Collapsed">
+                                        <Border Padding="14,0,14,14">
+                                            <TextBlock TextWrapping="Wrap" FontSize="13" LineHeight="20">
+                                                <Run Text="优化性能释放，降低各种延迟。在我们的测试中，相比“平衡”，其FPS提升幅度至少为10%，延迟至少降低30%。"
+                                                     Foreground="#444444"/>
+                                                <LineBreak/>
+                                                <Run Text="功耗可能增加。" Foreground="#E74C3C"/>
+                                            </TextBlock>
+                                        </Border>
+                                    </Border>
+                                </StackPanel>
+                            </Border>
+
+                        </StackPanel>
+                    </ScrollViewer>
                 </Grid>
 
                 <Grid x:Name="PageOptimizePrivacy" Visibility="Collapsed">
-                    <TextBlock Text="隐私优化" FontSize="24" HorizontalAlignment="Center" VerticalAlignment="Center"
-                               Margin="0,0,0,4"/>
+                    <TextBlock Text="隐私优化" FontSize="24" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,0,0,4"/>
                 </Grid>
-
                 <Grid x:Name="PageOptimizeTask" Visibility="Collapsed">
-                    <TextBlock Text="任务管理" FontSize="24" HorizontalAlignment="Center" VerticalAlignment="Center"
-                               Margin="0,0,0,4"/>
+                    <TextBlock Text="任务管理" FontSize="24" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,0,0,4"/>
                 </Grid>
 
                 <Grid x:Name="PageSettings" Visibility="Collapsed">
@@ -558,31 +869,28 @@
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
-
                     <StackPanel x:Name="SettingsHeader" Grid.Row="0" Margin="30,24,30,12">
                         <TextBlock Text="设置" FontSize="22" FontWeight="SemiBold"/>
                     </StackPanel>
-
                     <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto"
                                   local:ScrollBarFade.IsEnabled="True">
                         <StackPanel Margin="30,0,30,24">
-                            <Border BorderBrush="#EFEFEF" BorderThickness="0,0,0,1" Padding="0,0,0,16">
+                            <Border Background="#F4F7FC" CornerRadius="8" Padding="14,0,14,14">
                                 <StackPanel>
-                                    <Grid Height="52">
+                                    <Grid Height="46">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*"/>
                                             <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
-                                        <TextBlock Grid.Column="0" Text="弱PC模式"
-                                                   FontSize="14" FontWeight="SemiBold"
+                                        <TextBlock Grid.Column="0" Text="弱PC模式" FontSize="14" FontWeight="SemiBold"
                                                    VerticalAlignment="Center"/>
                                         <ToggleButton Grid.Column="1"
                                                       IsChecked="{Binding IsWeakPcMode, Mode=TwoWay}"
-                                                      Style="{StaticResource SettingsSwitchStyle}"
+                                                      Style="{StaticResource WeakPcSwitchStyle}"
                                                       VerticalAlignment="Center"/>
                                     </Grid>
                                     <TextBlock Text="启用该项以关闭程序内的所有视觉效果。"
-                                               FontSize="13" Foreground="#666666"
+                                               FontSize="13" Foreground="#444444"
                                                LineHeight="20" TextWrapping="Wrap"/>
                                 </StackPanel>
                             </Border>
@@ -591,18 +899,14 @@
                 </Grid>
 
                 <Grid x:Name="PageAbout" Visibility="Collapsed">
-                    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center"
-                                Margin="0,0,0,4">
+                    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0,0,0,4">
                         <Ellipse Width="190" Height="190" HorizontalAlignment="Center">
                             <Ellipse.Style>
                                 <Style TargetType="Ellipse">
                                     <Setter Property="Effect">
                                         <Setter.Value>
-                                            <DropShadowEffect Color="#000000"
-                                                              ShadowDepth="10"
-                                                              BlurRadius="28"
-                                                              Opacity="0.28"
-                                                              Direction="270"/>
+                                            <DropShadowEffect Color="#000000" ShadowDepth="10"
+                                                              BlurRadius="28" Opacity="0.28" Direction="270"/>
                                         </Setter.Value>
                                     </Setter>
                                     <Style.Triggers>
@@ -616,11 +920,8 @@
                                 <ImageBrush ImageSource="pack://application:,,,/avatar.jpg" Stretch="UniformToFill"/>
                             </Ellipse.Fill>
                         </Ellipse>
-
                         <TextBlock Text="Sh1r0ko" FontSize="38" FontWeight="Bold"
-                                   HorizontalAlignment="Center" Margin="0,30,0,0"
-                                   Foreground="#1A1A1A"/>
-
+                                   HorizontalAlignment="Center" Margin="0,30,0,0" Foreground="#1A1A1A"/>
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,40,0,0">
                             <Button Content="B站主页" Click="OpenBilibili"
                                     Style="{StaticResource LinkButtonStyle}" Margin="0,0,10,0"/>
@@ -630,32 +931,22 @@
                     </StackPanel>
                 </Grid>
 
-                <Border Height="32" VerticalAlignment="Bottom"
-                        Background="White" IsHitTestVisible="False"/>
+                <Border Height="32" VerticalAlignment="Bottom" Background="White" IsHitTestVisible="False"/>
             </Grid>
         </Grid>
 
         <StackPanel Orientation="Horizontal"
                     HorizontalAlignment="Right" VerticalAlignment="Top"
-                    WindowChrome.IsHitTestVisibleInChrome="True"
-                    Panel.ZIndex="9999">
-            <Button x:Name="MinBtn" Content="&#xE921;" 
-                    Style="{StaticResource CaptionBtnStyle}"
-                    Click="MinBtn_Click"/>
-            <Button x:Name="MaxBtn" Content="&#xE922;"
-                    Style="{StaticResource CaptionBtnStyle}"
-                    Click="MaxBtn_Click"/>
-            <Button x:Name="CloseBtn" Content="&#xE8BB;"
-                    Style="{StaticResource CloseBtnStyle}"
-                    Click="CloseBtn_Click"/>
+                    WindowChrome.IsHitTestVisibleInChrome="True" Panel.ZIndex="9999">
+            <Button x:Name="MinBtn" Content="&#xE921;" Style="{StaticResource CaptionBtnStyle}" Click="MinBtn_Click"/>
+            <Button x:Name="MaxBtn" Content="&#xE922;" Style="{StaticResource CaptionBtnStyle}" Click="MaxBtn_Click"/>
+            <Button x:Name="CloseBtn" Content="&#xE8BB;" Style="{StaticResource CloseBtnStyle}" Click="CloseBtn_Click"/>
         </StackPanel>
 
-        <Border x:Name="Toast"
-                HorizontalAlignment="Center" VerticalAlignment="Bottom"
+        <Border x:Name="Toast" HorizontalAlignment="Center" VerticalAlignment="Bottom"
                 Background="#333333" CornerRadius="8" Padding="20,12"
                 Margin="0,0,0,40" Opacity="0" Visibility="Collapsed"
-                IsHitTestVisible="False"
-                Panel.ZIndex="10000">
+                IsHitTestVisible="False" Panel.ZIndex="10000">
             <TextBlock x:Name="ToastText" Foreground="White" FontSize="13"/>
         </Border>
     </Grid>

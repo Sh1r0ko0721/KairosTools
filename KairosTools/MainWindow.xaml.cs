@@ -379,12 +379,8 @@ namespace KairosTools
                 return;
             }
 
-            // ★ 第一步：把所有参与动画的元素 Opacity 强制重置为 0
-            // 这些元素上次播完动画后 Opacity 停在 1，如果不重置，切页时会闪一帧
             ResetPowerElementsOpacity();
 
-            // ★ 第二步：延迟到下一帧渲染再开始动画
-            // 保证第一步的 Opacity=0 已经生效，避免 "先显示 → 再变 0 → 再动画" 的抽搐
             Dispatcher.BeginInvoke(new Action(() =>
             {
                 int delay = 0;
@@ -412,6 +408,7 @@ namespace KairosTools
 
                 AnimateSlideIn(SettingsTitleSection, delay); delay += 60;
 
+                // ★ 休眠：先把内部 item 的 Opacity 设为 1（模板里是 0），再把整个 ItemsControl 当整体滑入
                 if (HibernateItemsControl != null)
                 {
                     for (int i = 0; i < HibernateItemsControl.Items.Count; i++)
@@ -419,10 +416,11 @@ namespace KairosTools
                         var container = HibernateItemsControl.ItemContainerGenerator.ContainerFromIndex(i) as ContentPresenter;
                         if (container == null) continue;
                         var root = VisualTreeHelper.GetChild(container, 0) as FrameworkElement;
-                        if (root == null) continue;
-                        AnimateSlideIn(root, delay);
-                        delay += 50;
+                        if (root != null) root.Opacity = 1;
                     }
+
+                    AnimateSlideIn(HibernateItemsControl, delay);
+                    delay += 60;
                 }
 
                 AnimateSlideIn(PresetTitleSection, delay); delay += 60;
@@ -430,7 +428,6 @@ namespace KairosTools
             }), DispatcherPriority.Render);
         }
 
-        /// <summary>把电源页所有参与动画的元素 Opacity 重置为 0</summary>
         private void ResetPowerElementsOpacity()
         {
             if (PowerHeader != null) PowerHeader.Opacity = 0;
@@ -439,6 +436,7 @@ namespace KairosTools
             if (SettingsTitleSection != null) SettingsTitleSection.Opacity = 0;
             if (PresetTitleSection != null) PresetTitleSection.Opacity = 0;
             if (KhorvieRow != null) KhorvieRow.Opacity = 0;
+            if (HibernateItemsControl != null) HibernateItemsControl.Opacity = 0;
 
             if (PowerPlansControl != null)
             {
@@ -450,18 +448,9 @@ namespace KairosTools
                     if (root != null) root.Opacity = 0;
                 }
             }
-
-            if (HibernateItemsControl != null)
-            {
-                for (int i = 0; i < HibernateItemsControl.Items.Count; i++)
-                {
-                    var container = HibernateItemsControl.ItemContainerGenerator.ContainerFromIndex(i) as ContentPresenter;
-                    if (container == null) continue;
-                    var root = VisualTreeHelper.GetChild(container, 0) as FrameworkElement;
-                    if (root != null) root.Opacity = 0;
-                }
-            }
         }
+
+        /// <summary>把电源页所有参与动画的元素 Opacity 重置为 0</summary>
 
         private void AnimateSlideIn(FrameworkElement el, int delayMs)
         {
